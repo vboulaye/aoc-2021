@@ -1,11 +1,15 @@
+package day01
+
 import java.io.File
 import java.math.BigInteger
 import java.security.MessageDigest
+import kotlin.reflect.KClass
 
 /**
  * Reads lines from the given input txt file.
  */
-fun readInput(name: String) = File("src", "$name.txt").readLines()
+fun readInput(name: String, baseClass: KClass<*>) =
+    File(File("src", baseClass.qualifiedName!!.removeSuffix(".${baseClass.simpleName}")), "$name.txt").readLines()
 
 
 /**
