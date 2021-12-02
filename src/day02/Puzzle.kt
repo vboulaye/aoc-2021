@@ -4,17 +4,15 @@ import utils.readInput
 import java.lang.IllegalStateException
 
 data class Ctx(
-    val depth: Int = 0,
-    val pos: Int = 0,
-    val aim: Int = 0,
+    val depth: Int=0,
+    val pos: Int=0
 ) {
 
     fun move(action: Move): Ctx {
         return when {
-            //        depth by your aim multiplied by X.
-            action.dir.startsWith("f") -> Ctx(depth + aim * action.mov, pos + action.mov, aim)
-            action.dir.startsWith("u") -> Ctx(depth , pos, aim - action.mov)
-            action.dir.startsWith("d") -> Ctx(depth, pos, aim + action.mov)
+            action.dir.startsWith("f") -> Ctx(depth, pos + action.mov)
+            action.dir.startsWith("u") -> Ctx(depth - action.mov, pos)
+            action.dir.startsWith("d") -> Ctx(depth + action.mov, pos)
             else -> throw IllegalStateException();
         }
     }
@@ -46,13 +44,12 @@ fun part1Clean(input: List<String>): List<Move> {
 }
 
 fun part1Work(input: List<Move>): Int {
-    return input.fold(Ctx()) { acc, move -> acc.move(move) }.result()
+    return input.fold(Ctx()) {acc, move ->  acc.move(move)}.result()
 
 }
 
 fun part2Work(input: List<Move>): Int {
-
-    return input.fold(Ctx()) { acc, move -> acc.move(move) }.result()
+    return input.size
 }
 
 fun main() {
@@ -61,8 +58,8 @@ fun main() {
 
     // test if implementation meets criteria from the description, like:
     val testInput = readInput("test", Puzzle::class)
-    // check(puzzle.part1(testInput) == 150)
-    check(puzzle.part2(testInput) == 900)
+    check(puzzle.part1(testInput) == 150)
+    //check(puzzle.part2(testInput) == 0)
 
     val input = readInput("data", Ctx::class)
     println(puzzle.part1(input))
