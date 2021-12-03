@@ -16,3 +16,6 @@ fun readInput(name: String, baseClass: KClass<*>) =
  * Converts string to md5 hash.
  */
 fun String.md5(): String = BigInteger(1, MessageDigest.getInstance("MD5").digest(toByteArray())).toString(16)
+
+
+fun String.asBinary(): Int = this.toInt(2)
