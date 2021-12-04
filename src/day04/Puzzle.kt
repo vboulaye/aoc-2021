@@ -2,106 +2,105 @@ package day04
 
 import utils.readInput
 
-data class Plays(val numbers: List<Int>)
+data class Plays(private val numbers: List<Int>) {
+    fun next(): Pair<Int, Plays> = Pair(numbers[0], Plays(numbers.drop(1)))
+}
 
-data class Grid(val array: List<List<Int>>) {
+const val ARRAY_DIM = 5
+
+private const val FOUND = -1
+
+data class Grid(private val array: List<List<Int>>) {
+    init {
+        check(array.size == ARRAY_DIM)
+        check(array.all { it.size == ARRAY_DIM })
+    }
+
+    fun playNumber(numberPlayed: Int): Grid {
+        return Grid(this.array
+            .map { line ->
+                line
+                    .map { numberInGrid -> if (numberPlayed == numberInGrid) FOUND else numberInGrid }
+            })
+    }
+
     fun hasWon(): Boolean {
-        return array.any { it.all { it == -1 } }
-                || (0 until array[0].size).any { col -> (0 until array[0].size).all { line -> array[line][col] == -1 } }
+        return hasRowWon() || hasColWon()
+    }
+
+    private fun hasRowWon() = array.any { line -> line.all { numberInGrid -> numberInGrid == FOUND } }
+
+    private fun hasColWon(): Boolean {
+        val indexBrowser = 0 until ARRAY_DIM
+        return indexBrowser.any { colIndex -> indexBrowser.all { lineIndex -> array[lineIndex][colIndex] == FOUND } }
     }
 
     fun result(): Int {
-        val total = array.fold(0) { acc, it -> acc + it.filter { it >= 0 }.sumOf { it } }
-        return total
+        return array.fold(0) { acc, it -> acc + it.filter { it != FOUND }.sum() }
     }
 }
 
+data class Games(val list: List<Grid>) {
 
-data class Games(val players: List<Grid>) {
+    fun getWinner(): Grid? = list.find { it.hasWon() }
 
-    fun hasWinner(): Boolean {
-        return players.any { it.hasWon() }
-    }
-
-    fun getWinner(): Grid? {
-        return players.find { it.hasWon() }
-    }
-
-    fun getNonWinners(): List<Grid> {
-        return players.filter { !it.hasWon() }
-    }
+    fun getNonWinners(): List<Grid> = list.filter { !it.hasWon() }
 }
 
-data class Input(val plays: Plays, val games: Games)
+data class Input(val plays: Plays, val games: Games) {
+}
+
+tailrec fun playPart1(input: Input): Int {
+    val (numberPlayed, nextPlays) = input.plays.next()
+    val newGames = Games(input.games.list.map { grid -> grid.playNumber(numberPlayed) })
+    return newGames.getWinner()
+        ?.let { winner -> winner.result() * numberPlayed }
+        ?: playPart1(Input(nextPlays, newGames))
+}
+
+tailrec fun playPart2(input: Input): Int {
+    val (numberPlayed, nextPlays) = input.plays.next()
+    val nonWinners = input.games.getNonWinners()
+    val newGames = Games(input.games.list.map { grid -> grid.playNumber(numberPlayed) })
+
+    if (nonWinners.size == 1) {
+        val winner = newGames.getWinner()
+        if (winner != null) {
+            //  println("grid won " + winner)
+            return winner.result() * numberPlayed
+        }
+    }
+
+    return playPart2(Input(nextPlays, Games(newGames.list.filter { !it.hasWon() })))
+}
+
 class Puzzle {
 
     fun clean(input: List<String>): Input {
         val plays = Plays(input[0].split(",").map { x -> x.toInt() })
-        val games = Games(input.subList(2, input.size).windowed(5, 6)
-            .map {
-                Grid(it.map { line ->
-                    val transform: (String) -> Int = { x -> x.toInt() }
+        val games = Games(input.subList(2, input.size)
+            .windowed(ARRAY_DIM, 6)
+            .map { table ->
+                Grid(table.map { line ->
                     line.split(Regex(" +"))
-                        .filter { x -> !x.isBlank() }
-                        .map(transform)
-                })
+                        .filter(String::isNotBlank)
+                        .map(String::toInt)
+                }
+                )
             })
         return Input(plays, games)
     }
 
-    data class Ctx(
-        val index: Int = 0,
-        val games: Games
-    )
-
     val part1ExpectedResult = 4512
     fun part1(rawInput: List<String>): Int {
         val input = clean(rawInput)
-        val resultGames: Int = play(0, input.plays, input.games)
-        return resultGames
+        return playPart1(input);// play(0, input.plays, input.games)
     }
-
-    private fun play(i: Int, plays: Plays, games: Games): Int {
-        val numberPlayed = plays.numbers[i]
-        println("play " + numberPlayed)
-        val newGames = Games(games.players
-            .map { grid ->
-                Grid(grid.array.map { line -> line.map { numberInGrid -> if (numberPlayed == numberInGrid) -1 else numberInGrid } })
-            }
-        )
-
-
-        if (newGames.hasWinner()) {
-            println("grid won " + newGames.getWinner()!!)
-            return newGames.getWinner()!!.result() * numberPlayed
-        }
-        return play(i + 1, plays, newGames)
-    }
-
-    private fun play2(i: Int, plays: Plays, games: Games): Int {
-        val numberPlayed = plays.numbers[i]
-        println("play " + numberPlayed)
-        val nonWinners = games.getNonWinners()
-        val newGames = Games(games.players
-            .map { grid ->
-                Grid(grid.array.map { line -> line.map { numberInGrid -> if (numberPlayed == numberInGrid) -1 else numberInGrid } })
-            }
-        )
-        if (newGames.hasWinner() && nonWinners.size == 1) {
-          //  println("grid won " + newGames.getWinner()!!)
-            val r=newGames.getWinner()!!;//Grid(nonWinners[0].array.map { line -> line.map { numberInGrid -> if (numberPlayed == numberInGrid) -1 else numberInGrid } })
-            return r.result() * numberPlayed
-        }
-        //836 too low
-        return play2(i + 1, plays, Games(newGames.players.filter { !it.hasWon() }))
-    }
-
 
     val part2ExpectedResult = 1924
     fun part2(rawInput: List<String>): Int {
         val input = clean(rawInput)
-        val resultGames: Int = play2(0, input.plays, input.games)
-        return resultGames
+        return playPart2(input)
     }
 
 
@@ -116,9 +115,9 @@ fun main() {
     val input = readInput("zzdata", Puzzle::class)
 
 
-//    println("test1: ${puzzle.part1(testInput)} == $puzzle.part1ExpectedResult")
-//    check(puzzle.part1(testInput) == puzzle.part1ExpectedResult)
-//    println("part1: ${puzzle.part1(input)}")
+    println("test1: ${puzzle.part1(testInput)} == ${puzzle.part1ExpectedResult}")
+    check(puzzle.part1(testInput) == puzzle.part1ExpectedResult)
+    println("part1: ${puzzle.part1(input)}")
 
     println("test2: ${puzzle.part2(testInput)} == ${puzzle.part2ExpectedResult}")
     check(puzzle.part2(testInput) == puzzle.part2ExpectedResult)
