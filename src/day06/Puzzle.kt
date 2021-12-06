@@ -3,48 +3,51 @@ package day06
 import utils.readInput
 import java.math.BigInteger
 
-
-data class Pool(val fishes: List<Long>) {
+data class Pool(val fishCounters: Map<Int, BigInteger>) {
     fun next(): Pool {
-        var counter = 0
-        val newstate = fishes.map {
-            var newcount = it - 1
-            if (newcount == -1L) {
-                newcount = 6
-                counter++
+        val decreasedCounters = fishCounters
+            .map { it.key - 1 to it.value }
+            .toMap(LinkedHashMap())
+        decreasedCounters.remove(-1)
+            ?.let {
+                decreasedCounters[6] = (decreasedCounters[6] ?: BigInteger.ZERO).add(it)
+                decreasedCounters[8] = it
             }
-            newcount
-        }
 
-        val fishes1 = newstate + MutableList(counter) { 8L }
-        return Pool(fishes1)
-    }
-}
-
-data class Pool2(val fishes: Map<Int, BigInteger>) {
-    fun next(): Pool2 {
-        val newstate: MutableMap<Int, BigInteger> = LinkedHashMap<Int, BigInteger>()
-        fishes.entries.forEach {
-            newstate.put(it.key - 1, it.value)
-        }
-        val killed = newstate.remove(-1)?.let {
-            newstate.put(6, (newstate[6] ?: BigInteger.ZERO).add(it)             )
-            newstate[8] = it
-        }
-
-//        var counter = 0
-//        val newstate = fishes.map {
-//            var newcount = it - 1
-//            if(newcount==-1L) {
-//                newcount=6
-//                counter++
-//            }
-//            newcount
-//        }
+//        val newGeneration = fishCounters[0]?.let {
+//            val regeneration = decreasedCounters
+//                //.filter { it.first != 6 }
+//                .map { (counter, count) ->
+//                    when (counter) {
+//                        -1 -> 6 to (fishCounters[6+1] ?: BigInteger.ZERO).add(count)
+//                        else -> counter to count
+//                    }
+//                }
 //
-//        val fishes1 = newstate + MutableList(counter) { 8L }
-        return Pool2(newstate)
+//            regeneration + listOf(8 to it)
+//
+//        } ?: decreasedCounters
+
+//        val newGeneration = when (decreasedCounters[-1]) {
+//            null -> regeneration
+//            else -> regeneration + listOf(8 to (decreasedCounters[-1]))
+//        }
+
+        return Pool(decreasedCounters)
     }
+
+
+    fun wait(day: Int): Pool {
+        var input1 = this
+        var day1 = 0
+        while (day1 < day) {
+            day1++
+            input1 = input1.next()
+        }
+        return input1
+    }
+
+    fun result(): Long = fishCounters.values.fold(BigInteger.ZERO) { acc, it -> acc.add(it) }.toLong()
 }
 
 class Puzzle {
@@ -52,47 +55,27 @@ class Puzzle {
 
     }
 
+
     fun clean(input: List<String>): Pool {
-        return Pool(input.flatMap { it.split(",") }.map { it.toLong() })
-    }
-
-    fun clean2(input: List<String>): Pool2 {
-
-        val fishes = input.flatMap { it.split(",") }.map { it.toInt() }
-        val newstate: MutableMap<Int, BigInteger> = LinkedHashMap<Int, BigInteger>()
-        fishes.forEach {
-            newstate.put(it, (newstate[it] ?: BigInteger.ZERO).add(BigInteger.ONE))
-
+        val fishesList = input.flatMap { it.split(",") }.map { it.toInt() }
+        val fishCounters = fishesList.groupingBy { it }.aggregate { key, accumulator: BigInteger?, element, first ->
+            (accumulator ?: BigInteger.ZERO).add(BigInteger.ONE)
         }
-        return Pool2(newstate)
+        return Pool(fishCounters)
     }
 
-    val part1ExpectedResult = 5934
-    fun part1(rawInput: List<String>): Int {
+    val part1ExpectedResult = 5934L
+    fun part1(rawInput: List<String>): Long {
         var input = clean(rawInput)
-        var day = 0
-
-        while (day < 80) {
-            day++
-            input = input.next()
-        }
-
-        // 1868 <
-        return input.fishes.size
+        input = input.wait(80)
+        return input.result()
     }
 
     val part2ExpectedResult = 26984457539L
     fun part2(rawInput: List<String>): Long {
-        var input = clean2(rawInput)
-        var day = 0
-
-        while (day < 256) {
-            day++
-            input = input.next()
-        }
-
-        // 1868 <
-        return input.fishes.values.fold(BigInteger.ZERO) {acc,it -> acc.add(it)} .toLong()
+        var input = clean(rawInput)
+        input = input.wait(256)
+        return input.result()
     }
 
 }
