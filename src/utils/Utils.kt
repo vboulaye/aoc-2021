@@ -23,18 +23,19 @@ fun String.md5(): String = BigInteger(1, MessageDigest.getInstance("MD5").digest
 
 fun String.asBinary(): Int = this.toInt(2)
 
-
+fun <T : Comparable<T>> Iterable<T>.min(): T = this.minOrNull()!!
+fun <T : Comparable<T>> Iterable<T>.max(): T = this.maxOrNull()!!
 
 
 fun main() {
 
-    check(Vector(Point(0, 0), Point(0, 1)).gridLength()==1)
-    check(Vector(Point(1, 0), Point(1, 1)).gridLength()==1)
-    check(Vector(Point(0, 0), Point(1, 1)).gridLength()==1)
+    check(Vector(Point(0, 0), Point(0, 1)).gridLength() == 1)
+    check(Vector(Point(1, 0), Point(1, 1)).gridLength() == 1)
+    check(Vector(Point(0, 0), Point(1, 1)).gridLength() == 1)
 
-  //  assertEquals(Vector(Point(0, 0), Point(0, 1)).euclidLength(),1)
-    check(Vector(Point(1, 0), Point(1, 1)).gridLength()==1)
-    check(Vector(Point(0, 0), Point(1, 1)).gridLength()==1)
+    //  assertEquals(Vector(Point(0, 0), Point(0, 1)).euclidLength(),1)
+    check(Vector(Point(1, 0), Point(1, 1)).gridLength() == 1)
+    check(Vector(Point(0, 0), Point(1, 1)).gridLength() == 1)
 
     check(Vector(Point(0, 0), Point(0, 1)).isVertical())
     check(Vector(Point(0, 1), Point(0, 0)).isVertical())
@@ -43,5 +44,5 @@ fun main() {
     check(Vector(Point(1, 0), Point(0, 0)).isHorizontal())
 
     check(Vector(Point(0, 0), Point(1, 1)).isDiagonal())
-    check(Vector( Point(1, 1), Point(0, 0)).isDiagonal())
+    check(Vector(Point(1, 1), Point(0, 0)).isDiagonal())
 }
