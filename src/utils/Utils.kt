@@ -20,6 +20,11 @@ fun readInput(name: String, baseClass: KClass<*>) =
  */
 fun String.md5(): String = BigInteger(1, MessageDigest.getInstance("MD5").digest(toByteArray())).toString(16)
 
+/**
+ * sort characters inside a string
+ */
+fun String.sortString(): String =  this.toList().sorted().joinToString("")
+
 
 fun String.asBinary(): Int = this.toInt(2)
 
