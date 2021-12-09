@@ -32,58 +32,6 @@ data class Entry(val digits: List<String>, val code: List<String>) {
 
 }
 
-private fun hasEncodedSizePredicate(checkSize: Int): Predicate<String> =
-    Predicate<String> { encodedDigit -> encodedDigit.length == checkSize }
-private fun encodedDigitIncludesPredicate(includedString: String?):Predicate<String> =
-    Predicate<String>  { encodedDigit -> isIncluded(encodedDigit, includedString!!) }
-private fun hasEncodedSize(checkSize: Int): (String) -> Boolean =
-    { encodedDigit -> encodedDigit.length == checkSize }
-
-private fun encodedDigitIncludes(includedString: String?): (String) -> Boolean =
-    { encodedDigit -> isIncluded(encodedDigit, includedString!!) }
-
-private fun encodedDigitIsIncludedIn(includingString: String?): (String) -> Boolean =
-    { encodedDigit -> isIncluded(includingString!!, encodedDigit) }
-
-private fun removeKnownDigits(
-    digitToCodeDigit: MutableMap<Int, String>,
-    encodedDigitToPossibleDigits: MutableMap<String, List<Int>>
-) {
-    digitToCodeDigit.values.forEach { encodedDigitToPossibleDigits.remove(it) }
-}
-
-private fun getPossibleDigits(encodedDigit: String): List<Int> = when (encodedDigit.length) {
-    2 -> listOf(1)
-    3 -> listOf(7)
-    4 -> listOf(4)
-    7 -> listOf(8)
-    5 -> listOf(2, 3, 5)
-    6 -> listOf(0, 6, 9)
-    else -> throw IllegalStateException("invalid length for code $encodedDigit")
-}
-
-
-fun extractMatchingEncodedDigit(
-    encodedDigitToPossibleDigits: Map<String, List<Int>>,
-    predicates: List<(String) -> Boolean>
-): String {
-
-    val matchingList = encodedDigitToPossibleDigits.filter { encodedDigitToPossibleDigit ->
-        predicates.all { predicate ->
-            predicate(encodedDigitToPossibleDigit.key)
-        }
-    }
-        .toList()
-    check(matchingList.size == 1) { "no exact match $matchingList" }
-    return matchingList[0].first
-}
-
-private fun isIncluded(key: String, includedCharacter: String): Boolean {
-    val possibleChars = key.toList()
-    val other = includedCharacter.toList()
-
-    return possibleChars.intersect(other).size == includedCharacter.length
-}
 
 data class DictionaryComputer(val entry: Entry) {
 
@@ -173,6 +121,60 @@ data class DictionaryComputer(val entry: Entry) {
         check(digitToCodeDigit.size == 10)
         val codeDigitToDigit = digitToCodeDigit.map { it.value to it.key }.toMap()
         return codeDigitToDigit
+    }
+
+
+    private fun hasEncodedSizePredicate(checkSize: Int): Predicate<String> =
+        Predicate<String> { encodedDigit -> encodedDigit.length == checkSize }
+    private fun encodedDigitIncludesPredicate(includedString: String?):Predicate<String> =
+        Predicate<String>  { encodedDigit -> isIncluded(encodedDigit, includedString!!) }
+    private fun hasEncodedSize(checkSize: Int): (String) -> Boolean =
+        { encodedDigit -> encodedDigit.length == checkSize }
+
+    private fun encodedDigitIncludes(includedString: String?): (String) -> Boolean =
+        { encodedDigit -> isIncluded(encodedDigit, includedString!!) }
+
+    private fun encodedDigitIsIncludedIn(includingString: String?): (String) -> Boolean =
+        { encodedDigit -> isIncluded(includingString!!, encodedDigit) }
+
+    private fun removeKnownDigits(
+        digitToCodeDigit: MutableMap<Int, String>,
+        encodedDigitToPossibleDigits: MutableMap<String, List<Int>>
+    ) {
+        digitToCodeDigit.values.forEach { encodedDigitToPossibleDigits.remove(it) }
+    }
+
+    private fun getPossibleDigits(encodedDigit: String): List<Int> = when (encodedDigit.length) {
+        2 -> listOf(1)
+        3 -> listOf(7)
+        4 -> listOf(4)
+        7 -> listOf(8)
+        5 -> listOf(2, 3, 5)
+        6 -> listOf(0, 6, 9)
+        else -> throw IllegalStateException("invalid length for code $encodedDigit")
+    }
+
+
+    fun extractMatchingEncodedDigit(
+        encodedDigitToPossibleDigits: Map<String, List<Int>>,
+        predicates: List<(String) -> Boolean>
+    ): String {
+
+        val matchingList = encodedDigitToPossibleDigits.filter { encodedDigitToPossibleDigit ->
+            predicates.all { predicate ->
+                predicate(encodedDigitToPossibleDigit.key)
+            }
+        }
+            .toList()
+        check(matchingList.size == 1) { "no exact match $matchingList" }
+        return matchingList[0].first
+    }
+
+    private fun isIncluded(key: String, includedCharacter: String): Boolean {
+        val possibleChars = key.toList()
+        val other = includedCharacter.toList()
+
+        return possibleChars.intersect(other).size == includedCharacter.length
     }
 }
 
