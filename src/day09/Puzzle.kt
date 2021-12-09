@@ -1,128 +1,112 @@
 package day09
 
 import utils.readInput
-import java.lang.Math.abs
+import kotlin.math.abs
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 
 typealias Result = Long
 
 
-data class Point(val x: Int, val y: Int)
+fun List<List<Int>>.get(x: Int, y: Int, default: Int = 0): Int {
+    return try {
+        this[y][x]
+    } catch (e: IndexOutOfBoundsException) {
+        default
+    }
+}
 
-data class Grid(val array:List<List<Int>> ) {
+
+data class Grid(val array: List<List<Int>>) {
 
     fun computeRisks(): List<List<Int>> {
-        val risks: List<List<Int>> = array.mapIndexed { y, line ->
-            line.mapIndexed eval@{ x, value ->
-                val current = value
-
-                loop@ (-1..1).forEach { dy ->
-                    (-1..1).forEach { dx ->
-                        if (abs(dx) + abs(dy) <= 1) {
-                            if (!(dx == 0 && dy == 0)) {
-                                try {
-                                    if (array[y + dy][x + dx] < current) return@eval 0
-                                } catch (e: Exception) {
-
-                                }
+        val risks: List<List<Int>> =
+            array.mapIndexed { y, line ->
+                line.mapIndexed eval@{ x, value ->
+                    (-1..1).forEach { dy ->
+                        (-1..1).forEach { dx ->
+                            if (abs(dx) + abs(dy) == 1) {
+                                if (array.get(x + dx, y + dy, 9) < value) return@eval 0
                             }
                         }
                     }
+                    return@eval (value) + 1
                 }
-                return@eval (current) + 1
             }
-        }
         return risks
+    }
+
+    data class NeighbourSizer(val array: List<List<Int>>) {
+
+        data class Point(val x: Int, val y: Int)
+
+        private val testedPoints = HashSet<Point>()
+
+        fun getNeighboursSize(x: Int, y: Int): Int {
+            if (!testedPoints.add(Point(x, y))) return 0
+            val sizePoints =
+                (-1..1).map { dy ->
+                    (-1..1).map { dx ->
+                        when (abs(dx) + abs(dy)) {
+                            0 -> 1 // count the center point
+                            1 -> { // this is a close neighbour
+                                val testY = y + dy
+                                val testX = x + dx
+                                if (array.get(testX, testY, 9) < 9) {
+                                    getNeighboursSize(testX, testY)
+                                } else {
+                                    0
+                                }
+                            }
+                            else -> 0 // this is a diagonal => do not test
+                        }
+                    }
+                }
+            return sizePoints.sumOf { it.sum() }
+        }
     }
 
     fun computeBasins(): List<List<Int>> {
         val risks: List<List<Int>> = this.computeRisks()
         val basins: List<List<Int>> = risks.mapIndexed { y, line ->
-            line
-                .mapIndexed eval@{ x, value ->
-                    if (value > 0) {
-                        tested.clear()
-                        val size = getneighboursSize(x, y, input)
-                        size
-                    } else {
-                        0
-                    }
+            line.mapIndexed eval@{ x, value ->
+                if (value > 0) {
+                    NeighbourSizer(array).getNeighboursSize(x, y)
+                } else {
+                    0
                 }
+            }
         }
         return basins
     }
+
+
 }
+
 
 class Puzzle {
 
     fun clean(input: List<String>): Grid {
-        return Grid(input.map { it.toList().map { it.toString().toInt() } })
+        return Grid(input.map { line -> line.toList().map { character -> character - '0' } })
     }
 
-    private fun getSafe(input: List<List<Int>>, y: Int, i1: Int): Int {
-        try {
-            return input[y][i1]
-        } catch (e: Exception) {
-            return 9
-        }
-    }
     val part1ExpectedResult = 15L
     fun part1(rawInput: List<String>): Result {
         val input = clean(rawInput)
-        val risks: List<List<Int>> = input.computeRisks()
-        return risks.flatMap { it.toList() }.sum().toLong()
+        val risks = input.computeRisks()
+        return risks.sumOf { it.sum() }.toLong()
     }
-
-
 
     val part2ExpectedResult = 1134L
     fun part2(rawInput: List<String>): Result {
         val input = clean(rawInput)
-        val basins: List<List<Int>> = input.computeBasins(input)
-        return basins.flatMap { it.toList() }.sorted().reversed().subList(0, 3).fold(1) { acc, i -> acc * i }.toLong()
+        val basins = input.computeBasins()
+        return basins.flatMap { it.toList() }
+            .sortedDescending()
+            .take(3)
+            .fold(1) { acc, i -> acc * i }
+            .toLong()
     }
-
-
-
-
-    val tested = HashSet<Point>()
-    private fun getneighboursSize(x: Int, y: Int, input: List<List<Int>>): Int {
-        if (!tested.add(Point(x, y))) return 0
-        val sizePoints = (-1..1).map { dy ->
-            (-1..1).map { dx ->
-                if (abs(dx) + abs(dy) <= 1) {
-                    if (!(dx == 0 && dy == 0)) {
-                        try {
-                            val testY = y + dy
-                            val testX = x + dx
-                            if (input[testY][x + dx] < 9) {
-                                getneighboursSize(testX, testY, input)
-                            } else 0
-                        } catch (e: Exception) {
-                            0
-                        }
-                    } else {
-                        val r = input[y][x]
-                        1
-                    }
-
-                } else 0
-            }
-        }
-        return sizePoints.sumOf { it.sum() }
-    }
-
-    private fun getMax(dy: Int, dx: Int, input: List<List<Int>>, x: Int, y: Int): Int {
-        var testval = 0
-        var i = 0
-        while (testval < 9) {
-            i++
-            testval = getSafe(input, y + i * dy, x + i * dx)
-        }
-        return i - 1
-    }
-
 
 }
 
