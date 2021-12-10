@@ -2,98 +2,111 @@ package day10
 
 import utils.readInput
 import java.math.BigInteger
-import kotlin.math.abs
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 
 typealias Result = Long
 
 
-class Puzzle {
-    val cars = mapOf(
-        ')' to 3,
-        ']' to 57,
-        '}' to 1197,
-        '>' to 25137,
-    )
+val matchingCharacters = mapOf(
+    '(' to ')',
+    '[' to ']',
+    '{' to '}',
+    '<' to '>',
+)
 
-    val matching = mapOf(
-        '(' to ')',
-        '[' to ']',
-        '{' to '}',
-        '<' to '>',
-    )
+class Puzzle {
 
     fun clean(input: List<String>): List<List<Char>> {
         return input.map { it.toList() }
     }
 
+    object Part1 {
+        val points = mapOf(
+            ')' to 3,
+            ']' to 57,
+            '}' to 1197,
+            '>' to 25137,
+        )
+    }
 
     val part1ExpectedResult = 26397L
     fun part1(rawInput: List<String>): Result {
         val input = clean(rawInput)
-        val errors: List<Char> = input.map line@{
-            return@line incompletChar(it)
-        }
-        val frequency: Map<Char, Int> = errors.groupingBy { it }.eachCount()
-        return frequency.map { it.value*(cars[it.key]?:0) }.sum().toLong();
+        val errorLines: List<Char> = input.mapNotNull { parseLine(it, GetErrorCharacter()) }
+        val frequency: Map<Char, Int> = errorLines.groupingBy { it }.eachCount()
+        return frequency.map { it.value * (Part1.points[it.key]!!) }.sum().toLong();
     }
 
-    private fun incompletChar(it: List<Char>): Char {
+    interface ParsingHandler<ResultType> {
+        fun onError(stack: ArrayDeque<Char>, currentCharacter: Char): ResultType
+        fun onEnd(stack: ArrayDeque<Char>): ResultType
+    }
+
+    private fun <T> parseLine(it: List<Char>, parsingHandler: ParsingHandler<T>): T {
         val stack = ArrayDeque<Char>()
-        it.forEach { char ->
-            if (matching.containsKey(char)) {
-                stack.addFirst(char)
+        it.forEach { currentCharacter ->
+            if (matchingCharacters.containsKey(currentCharacter)) {
+                // open chunk
+                stack.addFirst(currentCharacter)
             } else {
                 val top = stack[0]
-                if (char == matching[top]!!) {
+                if (currentCharacter == matchingCharacters[top]!!) {
+                    // close chunk
                     stack.removeFirst()
                 } else {
-                    return char;
+                    // error chunk
+                    return parsingHandler.onError(stack, currentCharacter)
                 }
             }
-
         }
-        return ' '
+        return parsingHandler.onEnd(stack)
     }
 
-    private fun missingChar(it: List<Char>): ArrayDeque<Char> {
-        val stack = ArrayDeque<Char>()
-        it.forEach { char ->
-            if (matching.containsKey(char)) {
-                stack.addFirst(char)
-            } else {
-                val top = stack[0]
-                if (char == matching[top]!!) {
-                    stack.removeFirst()
-                } else {
-                    return ArrayDeque<Char>();
-                }
-            }
-
+    class GetErrorCharacter : ParsingHandler<Char?> {
+        override fun onError(stack: ArrayDeque<Char>, currentCharacter: Char): Char? {
+            return currentCharacter;
         }
-        return stack
+
+        override fun onEnd(stack: ArrayDeque<Char>): Char? {
+            return null
+        }
     }
 
-    val cars2 = mapOf(
-        ')' to 1,
-        ']' to 2,
-        '}' to 3,
-        '>' to 4,
-    )
+    class GetRemainingOpenCharacters : ParsingHandler<ArrayDeque<Char>?> {
+        override fun onError(stack: ArrayDeque<Char>, currentCharacter: Char): ArrayDeque<Char>? {
+            return null;
+        }
+
+        override fun onEnd(stack: ArrayDeque<Char>): ArrayDeque<Char>? {
+            return stack
+        }
+    }
+
+    object Part2 {
+        val fiveBigInteger = BigInteger("5")
+        val points = mapOf(
+            ')' to 1,
+            ']' to 2,
+            '}' to 3,
+            '>' to 4,
+        )
+    }
+
     val part2ExpectedResult = 288957L
     fun part2(rawInput: List<String>): Result {
         val input = clean(rawInput)
-        val completed = input
-            .filter { incompletChar(it) == ' ' }
-        val missing: List<Long> = completed
+        val missingCharactersScores: List<Long> = input
+            .mapNotNull { parseLine(it, GetRemainingOpenCharacters()) }
             .map {
-            missingChar(it).map { matching[it]!! } .map { cars2[it]!! }
-                .fold(BigInteger.ZERO) { acc, it -> acc.multiply(BigInteger("5")).plus(BigInteger(it.toString()))  }
-                .toLong()
-        }
-
-        return missing.sorted()[missing.size/2].toLong()
+                it.map { remainingOpenCharacters -> matchingCharacters[remainingOpenCharacters]!! }
+                    .map { closeCharacter -> Part2.points[closeCharacter]!! }
+                    .fold(BigInteger.ZERO) { acc, points ->
+                        acc.multiply(Part2.fiveBigInteger).plus(BigInteger.valueOf(points.toLong()))
+                    }
+                    .toLong()
+            }
+        return missingCharactersScores.sorted()[missingCharactersScores.size / 2]
     }
 
 }
