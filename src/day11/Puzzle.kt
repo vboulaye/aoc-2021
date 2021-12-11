@@ -10,104 +10,74 @@ typealias Result = Long
 class Puzzle {
 
     fun clean(input: List<String>): List<List<Int>> {
-        return input.map { it.toList().map { it.code - '0'.code } }
+        return input.map { line -> line.windowed(1).map { numberString -> numberString.toInt() } }
     }
 
     val part1ExpectedResult = 1656L
     fun part1(rawInput: List<String>): Result {
         val input = clean(rawInput)
-        var count: Long = 0
-        (0..99).fold(input) { acc, it ->
-            val newState: List<List<Int>> = step(acc)
-            val flashes = countFlashes(newState)
-            count += flashes
-            newState
-        }
-
-        return count;
+        return iterate(input, 100);
     }
 
-    private fun step(input: List<List<Int>>): List<List<Int>> {
+    private fun iterate(input: List<List<Int>>, i: Int): Long {
+        if (i == 0) return 0
+        val newState: List<List<Int>> = OctopusGrid(input).flashes()
+        val flashes = countFlashes(newState)
+        return flashes + iterate(newState, i - 1)
+    }
 
+    data class OctopusGrid(val input: List<List<Int>>) {
+        val array: MutableList<MutableList<Int>> = input.map { line -> line.toMutableList() }.toMutableList()
 
-        val newState = input.map { line ->
-            line.map { octopus ->
-                octopus + 1
-            }.toMutableList()
-        }.toMutableList()
-
-        val hasFlashed = input.map { line ->
-            line.map { octopus ->
-                false
-            }.toMutableList()
-        }.toMutableList()
-
-        //    val printed=         newState.joinToString("\n") {  it.joinToString { it.toString() } }
-        //  System.err.println(printed        +"\n")
-
-        newState.forEachIndexed { y, line ->
-            line.forEachIndexed { x, octopus ->
-                if (octopus > 9 && !hasFlashed[y][x]) {
-                    hasFlashed[y][x] = true
-                    flashAround(y, x, newState, hasFlashed)
+        fun flashes(): List<List<Int>> {
+            array.forEachIndexed { y, line ->
+                line.forEachIndexed { x, octopusLevel ->
+                    increaseLevel(y, x)
                 }
-
             }
+            return resetFlashedLevels()
         }
-        val newsState2 = newState.map { line ->
-            line.map { octopus ->
-                if (octopus > 9) 0 else octopus
-            }
-        }
-        //val printed2=         newsState2.joinToString("\n") {  it.joinToString { it.toString() } }
-        //  System.err.println(printed2        +"\n")
-        return newsState2
-    }
 
-    private fun flashAround(
-        y: Int,
-        x: Int,
-        newState: MutableList<MutableList<Int>>,
-        hasFlashed: MutableList<MutableList<Boolean>>
-    ) {
-        (-1..1).forEach { dy ->
-            (-1..1).forEach { dx ->
-                val testX = x + dx
-                val testY = y + dy
-                if (!(dx == 0 && dy == 0)) {
-                    try {
-                        val i = newState[testY][testX]
-                        newState[testY][testX] = i + 1
-                        if (newState[testY][testX] > 9 && !hasFlashed[testY][testX]) {
-                            hasFlashed[testY][testX] = true
-                            flashAround(testY, testX, newState, hasFlashed)
-                        }
-                    } catch (e: Exception) {
+        private fun resetFlashedLevels() = array.map { line -> line.map { octopus -> if (octopus > 9) 0 else octopus } }
 
+        private fun flashAround(y: Int, x: Int) {
+            (-1..1).forEach { dy ->
+                (-1..1).forEach { dx ->
+                    if (!(dx == 0 && dy == 0)) {
+                        val testX = x + dx
+                        val testY = y + dy
+                        increaseLevel(testY, testX)
                     }
                 }
             }
-
         }
+
+        private fun increaseLevel(y: Int, x: Int) {
+            val level = try {
+                array[y][x]
+            } catch (e: Exception) {
+                return
+            }
+            array[y][x] = level + 1
+            if (array[y][x] == 10) {
+                flashAround(y, x)
+            }
+        }
+    }
+
+    private fun getSynchronizedIndex(input: List<List<Int>>, index: Long = 0): Long {
+        if (countFlashes(input) == 100) return index
+        val newState: List<List<Int>> = OctopusGrid(input).flashes()
+        return getSynchronizedIndex(newState, index + 1)
     }
 
     val part2ExpectedResult = 195L
     fun part2(rawInput: List<String>): Result {
         val input = clean(rawInput)
-        var count: Long = 0
-        var index = 0
-        var newState = input
-        while (countFlashes(newState) != 100) {
-
-             newState= step(newState)
-            index++
-        }
-
-        return index.toLong();
+        return getSynchronizedIndex(input);
     }
 
-    private fun countFlashes(newState: List<List<Int>>) =
-        newState.sumOf { line: List<Int> -> line.count { it == 0 } }
+    private fun countFlashes(newState: List<List<Int>>) = newState.sumOf { line -> line.count { it == 0 } }
 
 }
 
@@ -124,7 +94,7 @@ fun main() {
         val testDuration = measureTime {
             val testResult = partEvaluator(testInput)
             println("test ${part}: $testResult == ${expectedTestResult}")
-            check(testResult == expectedTestResult)
+            check(testResult == expectedTestResult) { "$testResult != ${expectedTestResult}" }
         }
         val fullDuration = measureTime {
             val fullResult = partEvaluator(input)
