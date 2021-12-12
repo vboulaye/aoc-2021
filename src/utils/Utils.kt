@@ -3,6 +3,7 @@ package utils
 import java.io.File
 import java.math.BigInteger
 import java.security.MessageDigest
+import java.util.*
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.max
@@ -19,6 +20,9 @@ fun readInput(name: String, baseClass: KClass<*>) =
  * Converts string to md5 hash.
  */
 fun String.md5(): String = BigInteger(1, MessageDigest.getInstance("MD5").digest(toByteArray())).toString(16)
+
+fun String.isUpper() = this.uppercase(Locale.getDefault()) == this
+fun String.isLower() = this.lowercase(Locale.getDefault()) == this
 
 /**
  * sort characters inside a string
