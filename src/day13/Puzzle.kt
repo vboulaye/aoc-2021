@@ -15,97 +15,91 @@ data class Fold(val dir: String, val pos: Int) {
 
 }
 
-
-data class Input(val points: List<Point>, val folds: List<Fold>) {
+data class Input(val points: Set<Point>, val folds: List<Fold>) {
+    val maxX = this.points.map { it.x }.max()
+    val maxY = this.points.map { it.y }.max()
+    val array: List<List<Boolean>> = convert()
+    private fun convert(): List<List<Boolean>> {
+        val array: List<List<Boolean>> = (0..maxY).map { y ->
+            (0..maxX).map { x ->
+                this.points.contains(Point(x, y))
+            }
+        }
+        return array
+    }
 }
+
 
 class Puzzle {
 
     fun clean(input: List<String>): Input {
-        val points: List<Point> =
-            input.filter { it.contains(',') }.map { it.split(",") }.map { Point(it[0].toInt(), it[1].toInt()) }
-        val folds: List<Fold> = input.filter { it.contains("fold along") }
-            .map { it.split(" ") }.map { strings -> strings[2].split("=") }
-            .map { instr -> Fold(instr[0], instr[1].toInt()) }
+        val points: Set<Point> =
+            input.filter { it.contains(',') }
+                .map { it.split(",") }
+                .map {
+                    check(it.size == 2)
+                    Point(it[0].toInt(), it[1].toInt())
+                }
+                .toSet()
+        val folds: List<Fold> = input.filter { it.contains("fold along ") }
+            .map { it.substring("fold along ".length) }
+            .map { strings -> strings.split("=") }
+            .map { instr ->
+                check(instr.size == 2)
+                Fold(instr[0], instr[1].toInt())
+            }
         return Input(points, folds)
     }
 
     val part1ExpectedResult = 17L
     fun part1(rawInput: List<String>): Result {
         val input = clean(rawInput)
-        val array: List<List<Boolean>> = convert(input)
-        val foldPaper = foldPaper(array, input.folds[0])
-        //val result: List<List<Boolean>> = input.folds.fold(array) { acc, it -> foldPaper(acc, it) }
-        //667 too low
+        val foldPaper = foldPaper(input.array, input.folds[0])
         return foldPaper.sumOf { it.count { it } }.toLong()
     }
 
-    private fun convert(input: Input): List<List<Boolean>> {
-        val maxX = input.points.map { it.x }.max()
-        val maxY = input.points.map { it.y }.max()
-        val array: List<List<Boolean>> = (0..maxY).map { y ->
-            (0..maxX).map { x ->
-                val matchingPoint = input.points.find { it.x == x && it.y == y }
-                matchingPoint != null
+
+    data class Folder(val toX: Int, val toY: Int, val yGetter: (Int) -> Int, val xGetter: (Int) -> Int) {
+
+        fun fold(points: List<List<Boolean>>): List<List<Boolean>> {
+            return (0..toY).map { y ->
+                (0..toX).map { x ->
+                    if (points[y][x]) true
+                    else {
+                        val other = try {
+                            points[yGetter(y)][xGetter(x)]
+                        } catch (e: Exception) {
+                            false
+                        }
+                        other
+                    }
+                }
             }
         }
-        return array
     }
 
     private fun foldPaper(points: List<List<Boolean>>, it: Fold): List<List<Boolean>> {
-
-        val maxX = points[0].size
         val maxY = points.size
-        val toY = if (it.dir == Y) {
+        val maxX = points[0].size
+        val mirrorGetter: (Int) -> Int = { index -> (it.pos - index) + it.pos }
+        val identityGetter: (Int) -> Int = { index -> index }
 
-            return (0..it.pos).map { y ->
-                (0..maxX - 1).map { x ->
-                    if (points[y][x]) true
-                    else {
-                        val other = try {
-                            // 6->8
-                            // 7-6 +7
-                            points[(it.pos - y) + it.pos][x]
-                        } catch (e: Exception) {
-                            false
-                        }
-                        other
-                    }
-                }
-
-            }
+        val folder = if (it.dir == Y) {
+            Folder(maxX - 1, it.pos, mirrorGetter, identityGetter)
         } else {
-            return (0..maxY - 1).map { y ->
-                (0..it.pos).map { x ->
-                    if (points[y][x]) true
-                    else {
-                        val other = try {
-                            // 6->8
-                            // 7-6 +7
-                            points[y][(it.pos - x) + it.pos]
-                        } catch (e: Exception) {
-                            false
-                        }
-                        other
-                    }
-                }
-
-            }
+            Folder(it.pos, maxY - 1, identityGetter, mirrorGetter)
         }
-
+        return folder.fold(points)
 
     }
 
     val part2ExpectedResult = 0L
     fun part2(rawInput: List<String>): Result {
         val input = clean(rawInput)
-        val array: List<List<Boolean>> = convert(input)
-        // val foldPaper = foldPaper(array, input.folds[0])
-        val result: List<List<Boolean>> = input.folds.fold(array) { acc, it -> foldPaper(acc, it) }
-        //667 too low
+        val result: List<List<Boolean>> = input.folds.fold(input.array) { acc, it -> foldPaper(acc, it) }
         val output = result.joinToString("\n") { line -> line.joinToString { if (it) "#" else " " } }
-        System.err.println(output)
-        return 0;//foldPaper.sumOf { it.count { it } }.toLong()
+        println(output)
+        return 0;
     }
 
 }
@@ -118,6 +112,7 @@ class Puzzle {
 //#,  ,  ,  ,  , #,  ,  , #,  ,  , #, #, #,  ,  , #, #,  ,  , #,  ,  , #,  , #, #, #, #,  , #,  ,  , #,  , #, #, #, #,  ,
 //FAGURZME
 // FAGURZHE
+
 @OptIn(ExperimentalTime::class)
 fun main() {
     val puzzle = Puzzle()
