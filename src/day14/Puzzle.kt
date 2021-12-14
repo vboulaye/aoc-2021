@@ -14,6 +14,11 @@ data class Input(val polymerTemplate: String, val pairInsertions: Map<String, St
 
 }
 
+data class Input5(val polymerTemplate: LinkedList<Char>, val pairInsertions: Map<List<Char>, Char>) {
+
+}
+
+
 data class Input2(val polymerTemplate: List<List<Char>>, val pairInsertions: Map<List<Char>, List<Char>>) {
 
 }
@@ -159,20 +164,15 @@ class Puzzle {
     val part2ExpectedResult = 2188189693529L
     fun part2(rawInput: List<String>): Result {
         val input = clean(rawInput)
-        val pairInsertions =
-            input.pairInsertions.map { it.key.toList() to listOf(it.key[0], it.value[0], it.key[1]) }.toMap()
-                .toMutableMap()
-        val remplate: List<List<Char>> = input.polymerTemplate.toList().windowed(2).map {
-            val chars = pairInsertions[it]
-            chars!!
-        }
-        var next = Input3(
-            input.polymerTemplate.toList(),
-            pairInsertions
+
+        var next = Input5(
+            LinkedList(input.polymerTemplate.toList()),
+            input.pairInsertions.map { it.key.toList() to it.value[0] }.toMap()
         )
+
         (0..39).forEach {
             println(it)
-            next = insert3(next)
+            next = insert5(next)
         }
 //        var next = Input2(
 //            remplate,
@@ -190,6 +190,26 @@ class Puzzle {
 //        val max = groupingBy.values.max()
 //        val min = groupingBy.values.minOrNull()!!
 //        return (max - min).toLong()
+    }
+
+    private fun insert5(input: Input5): Input5 {
+        var index = 0
+        while(index<input.polymerTemplate.size-1) {
+            val pair = input.polymerTemplate.subList(index, index+2)
+            val insertion = input.pairInsertions[pair]
+            index++
+            input.polymerTemplate.add(index, insertion!!)
+            index++
+        }
+//        val newTemplate = input.polymerTemplate.windowed(2)
+//            .map {
+//            val insert = input.pairInsertions[it]!!
+//            insert + it[1]
+//        }.joinToString("") { it }
+//        val polymerTemplate = input.polymerTemplate[0] + newTemplate
+        //val sourcePairs = input.pairInsertions.map { entry -> entry.key to entry.value }
+        //sourcePairs + (input.polymerTemplate.)
+        return input//Input5(polymerTemplate, input.pairInsertions)
     }
 
 }
