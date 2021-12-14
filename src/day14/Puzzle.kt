@@ -2,7 +2,6 @@ package day14
 
 import utils.max
 import utils.readInput
-import java.lang.IllegalStateException
 import java.util.*
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
@@ -165,15 +164,26 @@ class Puzzle {
     fun part2(rawInput: List<String>): Result {
         val input = clean(rawInput)
 
-        var next = Input5(
-            LinkedList(input.polymerTemplate.toList()),
-            input.pairInsertions.map { it.key.toList() to it.value[0] }.toMap()
-        )
 
-        (0..39).forEach {
-            println(it)
-            next = insert5(next)
-        }
+        val counters = HashMap<String, Long>()
+        input.pairInsertions.values.forEach { counters[it] = 0 }
+        input.polymerTemplate.windowed(2)
+            .forEach {
+                println(it)
+                counters[it[1].toString()] = counters[it[1].toString()]!! + 1
+                count(it, input.pairInsertions, 40)
+                    .forEach {
+                        val existingValue = counters[it.key]
+                        if (existingValue == null) {
+                            counters[it.key] = it.value
+                        } else {
+                            counters[it.key] = existingValue + it.value
+                        }
+                    }
+                println(counters)
+            }
+        counters[input.polymerTemplate[0].toString()] = counters[input.polymerTemplate[0].toString()]!! + 1
+
 //        var next = Input2(
 //            remplate,
 //            pairInsertions
@@ -182,9 +192,10 @@ class Puzzle {
 //            println(it)
 //            next = insert2(next)
 //        }
-        val groupingBy: Map<Char, Int> = next.polymerTemplate.groupingBy { it }.eachCount()
-        val max = groupingBy.values.max()
-        val min = groupingBy.values.minOrNull()!!
+        val max = counters.values.max()
+        val min = counters.values.minOrNull()!!
+        // 13099972219652 too high
+        //13099972219652
         return (max - min).toLong()
 //        val groupingBy: Map<Char, Int> = next.polymerTemplate.groupingBy { it }.eachCount()
 //        val max = groupingBy.values.max()
@@ -192,10 +203,44 @@ class Puzzle {
 //        return (max - min).toLong()
     }
 
+    val cache: HashMap<Pair<String, Int>, HashMap<String, Long>> = HashMap()
+
+    private fun count(pair: String, pairInsertions: Map<String, String>, level: Int): HashMap<String, Long> {
+        if (level == 0) return HashMap();
+        val hashMap = cache[Pair(pair, level)]
+        if (hashMap != null) return hashMap
+
+        val counters = HashMap<String, Long>()
+        //println(level)
+        val insertion = pairInsertions[pair]!!
+        counters[insertion] = 1
+
+        count(pair[0] + insertion, pairInsertions, level - 1)
+            .forEach {
+                val existingValue = counters[it.key]
+                if (existingValue == null) {
+                    counters[it.key] = it.value
+                } else {
+                    counters[it.key] = existingValue + it.value
+                }
+            }
+        count(insertion + pair[1], pairInsertions, level - 1)
+            .forEach {
+                val existingValue = counters[it.key]
+                if (existingValue == null) {
+                    counters[it.key] = it.value
+                } else {
+                    counters[it.key] = existingValue + it.value
+                }
+            }
+        cache[Pair(pair, level)] = counters
+        return counters
+    }
+
     private fun insert5(input: Input5): Input5 {
         var index = 0
-        while(index<input.polymerTemplate.size-1) {
-            val pair = input.polymerTemplate.subList(index, index+2)
+        while (index < input.polymerTemplate.size - 1) {
+            val pair = input.polymerTemplate.subList(index, index + 2)
             val insertion = input.pairInsertions[pair]
             index++
             input.polymerTemplate.add(index, insertion!!)
