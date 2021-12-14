@@ -14,25 +14,6 @@ data class Input(val polymerTemplate: String, val pairInsertions: Map<String, St
 
 }
 
-data class Input5(val polymerTemplate: LinkedList<Char>, val pairInsertions: Map<List<Char>, Char>) {
-
-}
-
-
-data class Input2(val polymerTemplate: List<List<Char>>, val pairInsertions: Map<List<Char>, List<Char>>) {
-
-}
-
-data class Input3(val polymerTemplate: List<Char>, val pairInsertions: MutableMap<List<Char>, List<Char>>) {
-
-}
-
-
-data class Insertion(val elements: List<Insertion>)
-
-data class Input4(val polymerTemplate: List<Char>, val pairInsertions: MutableMap<Insertion, List<Insertion>>) {
-
-}
 
 class Puzzle {
 
