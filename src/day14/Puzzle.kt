@@ -48,7 +48,6 @@ class Puzzle {
 
         var next = Input(input.polymerTemplate, input.pairInsertions)
         (0..9).forEach {
-            println(it)
             next = insert(next)
         }
         val groupingBy: Map<Char, Int> = next.polymerTemplate.groupingBy { it }.eachCount()
@@ -63,8 +62,6 @@ class Puzzle {
             insert + it[1]
         }.joinToString("") { it }
         val polymerTemplate = input.polymerTemplate[0] + newTemplate
-        //val sourcePairs = input.pairInsertions.map { entry -> entry.key to entry.value }
-        //sourcePairs + (input.polymerTemplate.)
         return Input(polymerTemplate, input.pairInsertions)
     }
 
@@ -75,34 +72,15 @@ class Puzzle {
         cache.clear()
         val counters = HashMap<String, Long>()
         input.pairInsertions.values.forEach { counters[it] = 0 }
-        input.polymerTemplate.forEach {
-            val existingValue = counters[it.toString()]
-            if (existingValue == null) {
-                counters[it.toString()] = 1
-            } else {
-                counters[it.toString()] = existingValue + 1
-            }
-        }
+        input.polymerTemplate.forEach { merge(it.toString(), 1, counters) }
         input.polymerTemplate.windowed(2)
             .forEach {
-                println(it)
-//                counters[it[1].toString()] = counters[it[1].toString()]!! + 1
                 count(it, input.pairInsertions, 40)
-                    .forEach {
-                        val existingValue = counters[it.key]
-                        if (existingValue == null) {
-                            counters[it.key] = it.value
-                        } else {
-                            counters[it.key] = existingValue + it.value
-                        }
-                    }
-                println(counters)
+                    .forEach { merge(it.key, it.value, counters) }
             }
 
         val max = counters.values.max()
         val min = counters.values.min()
-        // 13099972219652 too high
-        // 13099972219652
         return (max - min).toLong()
 
     }
@@ -120,25 +98,20 @@ class Puzzle {
         counters[insertion] = 1
 
         count(pair[0] + insertion, pairInsertions, level - 1)
-            .forEach {
-                val existingValue = counters[it.key]
-                if (existingValue == null) {
-                    counters[it.key] = it.value
-                } else {
-                    counters[it.key] = existingValue + it.value
-                }
-            }
+            .forEach { merge(it.key, it.value, counters) }
         count(insertion + pair[1], pairInsertions, level - 1)
-            .forEach {
-                val existingValue = counters[it.key]
-                if (existingValue == null) {
-                    counters[it.key] = it.value
-                } else {
-                    counters[it.key] = existingValue + it.value
-                }
-            }
+            .forEach { merge(it.key, it.value, counters) }
         cache[Pair(pair, level)] = counters
         return counters
+    }
+
+    private fun merge(key: String, value: Long, counters: HashMap<String, Long>) {
+        val existingValue = counters[key]
+        if (existingValue == null) {
+            counters[key] = value
+        } else {
+            counters[key] = existingValue + value
+        }
     }
 
 
