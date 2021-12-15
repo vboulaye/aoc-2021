@@ -1,8 +1,21 @@
-package day15;
+package day15
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+
+/**
+ * interface that must be implemented by callers to PathFinder in order to
+ * describe the network For each node the find related shows where to go next
+ */
+interface FindRelated<E, R> {
+    /**
+     * return the list of path elements that exist in the network from the node
+     * o the path element contains related objects and the relation to gets
+     * there
+     *
+     * @param o
+     * @return
+     */
+    fun findRelated(o: WorkPathElement<E>?): List<WorkPathElement<E>?>?
+}
 
 /**
  * utility class used to find the shortest path between 2 nodes inside a network
@@ -10,25 +23,20 @@ import java.util.List;
  * network for one node the findRelated() method returns all related nodes The
  * search of the shortest path is a simplification of the dijkstra algorithm
  */
-public class PathFinder<E, R> {
-
+class PathFinder<E, R>(findRelated: FindRelated<E, R>?) {
     /**
      * the FindRelated implementation that describes the network
      */
-    private final FindRelated<E, R> findRelated;
+    private val findRelated: FindRelated<E, R>
 
     /**
      * constructor, sets the FindRelated implementation
      *
      * @param findRelated
      */
-    public PathFinder(FindRelated<E, R> findRelated) {
-
-        if (findRelated == null) {
-            throw new IllegalArgumentException("findRelated implementation must be not null");
-        }
-
-        this.findRelated = findRelated;
+    init {
+        requireNotNull(findRelated) { "findRelated implementation must be not null" }
+        this.findRelated = findRelated
     }
 
     /**
@@ -39,16 +47,14 @@ public class PathFinder<E, R> {
      * @param targetNode target node object
      * @return the path as a list of nodes
      */
-    public List<WorkPathElement<E, R>> findPath(E sourceNode, E targetNode) {
+    fun findPath(sourceNode: E, targetNode: E): List<WorkPathElement<E>> {
+        val remainingNodes = computePath(sourceNode, targetNode)
+        return buildPath(sourceNode, targetNode, remainingNodes)
+    }
 
-
-
-        PathPriorityQueue<E, R> remainingNodes = computePath(sourceNode, targetNode);
-
-        List<WorkPathElement<E, R>> path = buildPath(sourceNode, targetNode, remainingNodes);
-
-
-        return path;
+    fun findDistance(sourceNode: E, targetNode: E): Int {
+        val remainingNodes = computePath(sourceNode, targetNode)
+        return remainingNodes.getWorkPathElement(targetNode).distance
     }
 
     /**
@@ -60,44 +66,37 @@ public class PathFinder<E, R> {
      * @return the queue with all evaluated nodes, the path can be build from
      * there
      */
-    private PathPriorityQueue<E, R> computePath(E sourceNode, E targetNode) {
+    private fun computePath(sourceNode: E, targetNode: E): PathPriorityQueue<E> {
         // set of nodes that are still possible choices for the path
-        PathPriorityQueue<E, R> remainingNodes = new PathPriorityQueue<E, R>();
+        val remainingNodes = PathPriorityQueue<E>()
 
         // add source node with a distance of 0
-        remainingNodes.getWorkPathElement(sourceNode).setDistance(0);
-        remainingNodes.push(sourceNode);
+        remainingNodes.getWorkPathElement(sourceNode).distance = 0
+        remainingNodes.push(sourceNode)
 
         // work on the remaining node that is currently seen as the closest to
         // the source
-        E closest = remainingNodes.pop();
+        var closest = remainingNodes.pop()
 
         // loop until there is no more nodes or if the destination is reached
-        while ((closest != null) && (!closest.equals(targetNode))) {
+        while (closest != null && closest != targetNode) {
 
 
             // flag the node in order not to evaluate it twice
-            WorkPathElement<E, R> closestNodeWorkPathElement = remainingNodes.getWorkPathElement(closest);
-            closestNodeWorkPathElement.setEvaluated(true);
+            val closestNodeWorkPathElement = remainingNodes.getWorkPathElement(closest)
+            closestNodeWorkPathElement.isEvaluated = true
 
             // update the distance of all related nodes of the work node by
             // evaluating the impact of using it as a predecessor
-            List<WorkPathElement<E, R>> related = findRelated.findRelated(closestNodeWorkPathElement);
-
-            if ((related != null) && (!related.isEmpty())) {
-
-                for (WorkPathElement<E, R> relatedPath : related) {
-                    processRelatedNode(remainingNodes, closestNodeWorkPathElement, relatedPath);
-
+            val related = findRelated.findRelated(closestNodeWorkPathElement)
+            if (related != null && !related.isEmpty()) {
+                for (relatedPath in related) {
+                    processRelatedNode(remainingNodes, closestNodeWorkPathElement, relatedPath)
                 } // end for all related nodes
-
             } // if there exist related nodes
-
-            closest = remainingNodes.pop();
-
+            closest = remainingNodes.pop()
         } // while there are still some nodes to evaluate
-
-        return remainingNodes;
+        return remainingNodes
     }
 
     /**
@@ -108,61 +107,60 @@ public class PathFinder<E, R> {
      * @param remainingNodes Map of evaluated nodes
      * @return List of WorkPathElement from source to target
      */
-    private List<WorkPathElement<E, R>> buildPath(E sourceNode, E targetNode, PathPriorityQueue<E, R> remainingNodes) {
-        List<WorkPathElement<E, R>> path = Collections.emptyList();
+    private fun buildPath(
+        sourceNode: E,
+        targetNode: E,
+        remainingNodes: PathPriorityQueue<E>
+    ): List<WorkPathElement<E>> {
 
 
-        // only build the path if the distance if not infinite (a path was
-        // actually found)
-        if (remainingNodes.getWorkPathElement(targetNode).getDistance() != Integer.MAX_VALUE) {
-            path = new ArrayList<>();
-
-            // we add the destination node and all its predecessors (processing
-            // backwards)
-            E predecessor = targetNode;
-            while ((predecessor != null) && !predecessor.equals(sourceNode)) {
-                // put the predecessor as the first node
-                WorkPathElement<E, R> predecessorElement = remainingNodes.getWorkPathElement(predecessor);
-                path.add(predecessorElement);
-                predecessor = predecessorElement.getPredecessor();
-            }
-
-            // add the init node
-            path.add(remainingNodes.getWorkPathElement(sourceNode));
+        // only build the path if the distance if not infinite (a path was  actually found)
+        if (remainingNodes.getWorkPathElement(targetNode).distance == Int.MAX_VALUE) {
+            return emptyList<WorkPathElement<E>>()
         }
-        return path;
+
+        val path = emptyList<WorkPathElement<E>>().toMutableList()
+
+        // we add the destination node and all its predecessors (processing
+        // backwards)
+        var predecessor: E? = targetNode
+        while (predecessor != null && predecessor != sourceNode) {
+            // put the predecessor as the first node
+            val predecessorElement = remainingNodes.getWorkPathElement(predecessor)
+            path.add(predecessorElement)
+            predecessor = predecessorElement.predecessor
+        }
+
+        // add the init node
+        path.add(remainingNodes.getWorkPathElement(sourceNode))
+        return path
     }
 
-    private void processRelatedNode(PathPriorityQueue<E, R> remainingNodes, WorkPathElement<E, R> closestNodeWorkPathElement,
-                                    WorkPathElement<E, R> relatedPath) {
-        E relatedNode = relatedPath.getElement();
-
-        E closest = closestNodeWorkPathElement.getElement();
+    private fun processRelatedNode(
+        remainingNodes: PathPriorityQueue<E>, closestNodeWorkPathElement: WorkPathElement<E>,
+        relatedPath: WorkPathElement<E>?
+    ) {
+        val relatedNode = relatedPath!!.element
+        val closest = closestNodeWorkPathElement.element
 
         // Do not check items that are already evaluated
-        WorkPathElement<E, R> relatedNodeWorkPathElement = remainingNodes.getWorkPathElement(relatedNode);
-     //   relatedNodeWorkPathElement.setDistance(relatedPath.getDistance());
+        val relatedNodeWorkPathElement = remainingNodes.getWorkPathElement(relatedNode)
+        if (!relatedNodeWorkPathElement.isEvaluated) {
 
-        if (!relatedNodeWorkPathElement.isEvaluated()) {
-
-            // distance = current distance from source + distance(current note,
-            // neighbour) (always 1 in OneCRMCore)
-            int distance = closestNodeWorkPathElement.getDistance() + relatedPath.getDistance();
+            // distance = current distance from source + distance(current note, neighbour)
+            val distance = closestNodeWorkPathElement.distance + relatedPath.distance
 
             // check if the new distance is closer
-            int oldDistance = relatedNodeWorkPathElement.getDistance();
-
+            val oldDistance = relatedNodeWorkPathElement.distance
             if (oldDistance > distance) {
                 // update the path element with ne distance/predecessor info
-                relatedNodeWorkPathElement.setDistance(distance);
-                relatedNodeWorkPathElement.setPredecessor(closest);
-                relatedNodeWorkPathElement.setRelation(relatedPath.getRelation());
+                relatedNodeWorkPathElement.distance = distance
+                relatedNodeWorkPathElement.predecessor = closest
 
                 // re-balance the related Node using the new shortest distance
                 // found
-                remainingNodes.push(relatedNode);
+                remainingNodes.push(relatedNode)
             }
         }
     }
-
 }

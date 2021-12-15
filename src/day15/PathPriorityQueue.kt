@@ -1,45 +1,32 @@
-package day15;
+package day15
 
-import java.io.Serializable;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.PriorityQueue;
+import java.io.Serializable
+import java.util.*
 
-public class PathPriorityQueue<E, R> implements Serializable {
-
-    private static final long serialVersionUID = 1L;
+class PathPriorityQueue<E> : Serializable {
     /**
      * map containing path elements (a path element is a node in the network,
      * the distance to the source and the current predecessor)
      */
-    private final Map<E, WorkPathElement<E, R>> WorkPathElements = new HashMap<E, WorkPathElement<E, R>>();
-    /**
-     * a set of nodes that are still possible choices for the path
-     */
-    private final PriorityQueue<E> remainingNodesToEvaluate = new PriorityQueue<E>(100, new Comparator<E>() {
-        @Override
-        public int compare(E o1, E o2) {
-            WorkPathElement<E, R> workPathElement = getWorkPathElement(o1);
-            int d1 = workPathElement.isEvaluated() ? Integer.MAX_VALUE : workPathElement.getDistance();
-            WorkPathElement<E, R> workPathElement2 = getWorkPathElement(o2);
-            int d2 = workPathElement2.isEvaluated() ? Integer.MAX_VALUE : workPathElement2.getDistance();
+    private val workPathElements: MutableMap<E, WorkPathElement<E>> = HashMap()
 
-            if (d1 < d2) {
-                return -1;
-            } else {
-                return (d1 == d2) ? 0 : 1;
-            }
-        }
-    });
+    /**
+     * a set of nodes that are still possible choices for the path, sorted by lowest distance
+     */
+    private val remainingNodesToEvaluate = PriorityQueue<E>(100, compareBy { getDistance(it) })
+
+    private fun getDistance(o1: E): Int {
+        val workPathElement = workPathElements[o1]!!
+        return if (workPathElement.isEvaluated) Int.MAX_VALUE else workPathElement.distance
+    }
 
     /**
      * add a node to the list of remaining nodes
      *
      * @param element
      */
-    void push(E element) {
-        remainingNodesToEvaluate.add(element);
+    fun push(element: E) {
+        remainingNodesToEvaluate.add(element)
     }
 
     /**
@@ -48,10 +35,8 @@ public class PathPriorityQueue<E, R> implements Serializable {
      *
      * @return the "closest" node
      */
-    E pop() {
-        E result = null;
-        result = remainingNodesToEvaluate.poll();
-        return result;
+    fun pop(): E? {
+        return remainingNodesToEvaluate.poll()
     }
 
     /**
@@ -62,13 +47,9 @@ public class PathPriorityQueue<E, R> implements Serializable {
      * @return the path element describing how the node is used in the path
      * search
      */
-    WorkPathElement<E, R> getWorkPathElement(E node) {
-        WorkPathElement<E, R> element = WorkPathElements.get(node);
-        if (element == null) {
-            element = new WorkPathElement<E, R>(node);
-            WorkPathElements.put(node, element);
-        }
-        return element;
+
+    fun getWorkPathElement(node: E): WorkPathElement<E> {
+        return workPathElements.getOrPut(node) { WorkPathElement(node) }
     }
 
 }
