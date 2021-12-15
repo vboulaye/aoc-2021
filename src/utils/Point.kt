@@ -1,6 +1,8 @@
 package utils
 
-data class Point(val x: Int, val y: Int) {
+import java.io.Serializable
+
+data class Point(val x: Int, val y: Int) :Serializable{
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
