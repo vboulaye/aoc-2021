@@ -84,18 +84,19 @@ class Puzzle {
     var index = 3
     fun part2(rawInput: List<String>): Result {
         val input = clean(rawInput)
-        check(calc(clean(listOf("C200B40A82"))) == 3L)
-        check(calc(clean(listOf("04005AC33890"))) == 54L)
-        check(calc(clean(listOf("880086C3E88112"))) == 7L)
-        check(calc(clean(listOf("CE00C43D881120"))) == 9L)
-        check(calc(clean(listOf("D8005AC2A8F0"))) == 1L)
-        check(calc(clean(listOf("F600BC2D8F"))) == 0L)
-        check(calc(clean(listOf("9C005AC2F8F0"))) == 0L)
-        check(calc(clean(listOf("9C0141080250320F1802104A08"))) == 1L)
+//        check(calc(clean(listOf("C200B40A82"))) == 3L)
+//        check(calc(clean(listOf("04005AC33890"))) == 54L)
+//        check(calc(clean(listOf("880086C3E88112"))) == 7L)
+//        check(calc(clean(listOf("CE00C43D881120"))) == 9L)
+//        check(calc(clean(listOf("D8005AC2A8F0"))) == 1L)
+//        check(calc(clean(listOf("F600BC2D8F"))) == 0L)
+//        check(calc(clean(listOf("9C005AC2F8F0"))) == 0L)
+//        check(calc(clean(listOf("9C0141080250320F1802104A08"))) == 1L)
         // 54
         // 258889206734
         return calc(input)
     }
+
 
     private fun parsePacket(input: List<String>, versions: ArrayList<Int>): Long {
 
@@ -146,10 +147,10 @@ class Puzzle {
             2 -> subPacks.minOrNull()!!
             3 -> subPacks.maxOrNull()!!
             5 -> {
-                check(subPacks.size == 2); if (subPacks[0] >= subPacks[1]) 1 else 0
+                check(subPacks.size == 2); if (subPacks[0] > subPacks[1]) 1 else 0
             }
             6 -> {
-                check(subPacks.size == 2); if (subPacks[0] <= subPacks[1]) 1 else 0
+                check(subPacks.size == 2); if (subPacks[0] <subPacks[1]) 1 else 0
             }
             7 -> {
                 check(subPacks.size == 2); if (subPacks[0] == subPacks[1]) 1 else 0
