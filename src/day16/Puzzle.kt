@@ -1,9 +1,6 @@
 package day16
 
 import utils.readInput
-import java.lang.IllegalStateException
-import java.lang.StringBuilder
-import kotlin.collections.ArrayList
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 
@@ -55,23 +52,60 @@ class Puzzle {
         return versions.sum().toLong()
     }
 
+
+    enum class OperatorType {
+        value, sum, mult, min, max, greater, less, equals//, jump, jumpIfTrue, jumpIfFalse,
+    }
+
+    data class Packet(
+        val version: Int,
+        val operator: OperatorType,
+        val subPackets: List<Packet>,
+        val value: Long = 0L
+    ) {
+
+        fun getVersions() {
+            subPackets.fold(version) { acc, packet -> acc + packet.version }
+        }
+
+        fun calculate(): Long {
+            return when (operator) {
+                OperatorType.value -> {
+                    value
+                }
+                OperatorType.sum -> {
+                    subPackets.sumOf { it.calculate() }
+                }
+                OperatorType.mult -> {
+                    subPackets.fold(1L) { acc, packet -> acc * packet.calculate() }
+                }
+                OperatorType.min -> {
+                    subPackets.map { it.calculate() }.minOrNull()!!
+                }
+                OperatorType.max -> {
+                    subPackets.map { it.calculate() }.maxOrNull()!!
+                }
+                OperatorType.greater -> {
+                    check(subPackets.size == 2)
+                    if (subPackets[0].calculate() > subPackets[1].calculate()) 1 else 0
+                }
+                OperatorType.less -> {
+                    check(subPackets.size == 2)
+                    if (subPackets[0].calculate() < subPackets[1].calculate()) 1 else 0
+                }
+                OperatorType.equals -> {
+                    check(subPackets.size == 2)
+                    if (subPackets[0].calculate() == subPackets[1].calculate()) 1 else 0
+                }
+            }
+        }
+    }
+
     private fun parse(input: List<String>): Long {
         versions = ArrayList<Int>()
         index = 0
-        val endIndex = input.sumOf { it.length }
-        var x = 0L
-
-        while (index < endIndex - 1) {
-//            if( endIndex-index <=20) {
-//            //    getNextCar(endIndex-index)
-////                if(input.subList(index, endIndex).toList().filter { it !='0'}.isEmpty()) {
-//                    break;
-////                }
-//            }
-            val parsePacket = parsePacket(input, versions)
-            return parsePacket
-        }
-        return x
+        val parsePacket = parsePacket(input, versions)
+        return parsePacket
 
     }
 
@@ -84,16 +118,14 @@ class Puzzle {
     var index = 3
     fun part2(rawInput: List<String>): Result {
         val input = clean(rawInput)
-//        check(calc(clean(listOf("C200B40A82"))) == 3L)
-//        check(calc(clean(listOf("04005AC33890"))) == 54L)
-//        check(calc(clean(listOf("880086C3E88112"))) == 7L)
-//        check(calc(clean(listOf("CE00C43D881120"))) == 9L)
-//        check(calc(clean(listOf("D8005AC2A8F0"))) == 1L)
-//        check(calc(clean(listOf("F600BC2D8F"))) == 0L)
-//        check(calc(clean(listOf("9C005AC2F8F0"))) == 0L)
-//        check(calc(clean(listOf("9C0141080250320F1802104A08"))) == 1L)
-        // 54
-        // 258889206734
+        check(calc(clean(listOf("C200B40A82"))) == 3L)
+        check(calc(clean(listOf("04005AC33890"))) == 54L)
+        check(calc(clean(listOf("880086C3E88112"))) == 7L)
+        check(calc(clean(listOf("CE00C43D881120"))) == 9L)
+        check(calc(clean(listOf("D8005AC2A8F0"))) == 1L)
+        check(calc(clean(listOf("F600BC2D8F"))) == 0L)
+        check(calc(clean(listOf("9C005AC2F8F0"))) == 0L)
+        check(calc(clean(listOf("9C0141080250320F1802104A08"))) == 1L)
         return calc(input)
     }
 
@@ -102,9 +134,6 @@ class Puzzle {
 
         val version = getNextCar(3, input).toInt(2)
         versions.add(version)
-//        if (index == input.sumOf { it.length } - 1) {
-//            return 0L
-//        }
 
         val l = input.sumOf { it.length }
 
