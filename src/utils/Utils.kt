@@ -27,7 +27,7 @@ fun String.isLower() = this.lowercase(Locale.getDefault()) == this
 /**
  * sort characters inside a string
  */
-fun String.sortString(): String =  this.toList().sorted().joinToString("")
+fun String.sortString(): String = this.toList().sorted().joinToString("")
 
 
 fun String.asBinary(): Int = this.toInt(2)
@@ -54,4 +54,8 @@ fun main() {
 
     check(Vector(Point(0, 0), Point(1, 1)).isDiagonal())
     check(Vector(Point(1, 1), Point(0, 0)).isDiagonal())
+}
+
+fun <T> checkEquals(testResult: T, expectedTestResult: T) {
+    check(testResult == expectedTestResult) { "ERROR : $testResult != ${expectedTestResult}" }
 }
