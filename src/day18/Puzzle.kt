@@ -3,20 +3,20 @@ package day18
 import utils.checkEquals
 import utils.readInput
 import java.util.*
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 
 typealias Result = Long
 
 
-
-data class SnailFishNumber(var line: String, val start: Int) {
+data class SnailFishNumberOld(var line: String, val start: Int) {
     var end: Int = 0
     var comma: Int = 0
-    var parentSnail: SnailFishNumber? = null
-    var leftSnail: SnailFishNumber? = null
+    var parentSnail: SnailFishNumberOld? = null
+    var leftSnail: SnailFishNumberOld? = null
     var leftValue: Int = -1
-    var rightSnail: SnailFishNumber? = null
+    var rightSnail: SnailFishNumberOld? = null
     var rightValue: Int = -1
     fun left() = line.substring(start + 1, comma)
     fun right() = line.substring(comma + 1, end)
@@ -26,18 +26,49 @@ data class SnailFishNumber(var line: String, val start: Int) {
     }
 }
 
+sealed class SnailFishNumber() {
+    var parent: SnailFishNumberPair? = null
+        get() = parent
+}
+
+class SnailFishNumberInt(var value: Int) : SnailFishNumber() {
+    var previous: SnailFishNumberInt? = null
+        set(value) {
+            value?.let { it.next = this }
+            field = value
+        }
+
+    var next: SnailFishNumberInt? = null
+        set(value) {
+            value?.let { it.previous = this }
+            field = value
+        }
+    override fun toString(): String = "$value"
+}
+
+
+class SnailFishNumberPair(val left: SnailFishNumber, val right: SnailFishNumber) :
+    SnailFishNumber() {
+    init {
+        left.parent = this
+        right.parent = this
+    }
+
+    override fun toString(): String = "[$left,$right]]"
+}
 
 class Puzzle {
-    fun clean(input: List<String>): List<SnailFishNumber> {
+
+    fun clean(input: List<String>): List<SnailFishNumberPair> {
 
         return input.filter { true }.map { line ->
-            val stack = Stack<SnailFishNumber>()
-            val reverseStack = Stack<SnailFishNumber>()
+            val stack = Stack<SnailFishNumberOld>()
+            val reverseStack = Stack<SnailFishNumberOld>()
 
             line.forEachIndexed { index, c ->
 
                 if (c == '[') {
-                    stack.push(SnailFishNumber(line = line, start = index))
+                    stack.push(SnailFishNumberOld(line = line, start = index))
                 }
                 if (c == ',') {
                     val fishNumber = stack.peek()
@@ -61,14 +92,44 @@ class Puzzle {
                         snailFishNumber.parentSnail = fishNumber
                     }
                     reverseStack.push(fishNumber)
-                    //     println(fishNumber)
                 }
             }
 
             val snailFishNumber = reverseStack.pop()
-            snailFishNumber
+            val lastNumberHolder = AtomicReference<SnailFishNumberInt>()
+            val newPair: SnailFishNumberPair = convertToSnailFish(snailFishNumber!!, lastNumberHolder)
+
+            newPair
+
 
         }
+    }
+
+    private fun convertToSnailFish(
+        snailFishNumber: SnailFishNumberOld,
+        lastNumberHolder: AtomicReference<SnailFishNumberInt>
+    ): SnailFishNumberPair {
+        val left = if (snailFishNumber.leftSnail == null) {
+            val snailFishNumberInt = SnailFishNumberInt(snailFishNumber.leftValue)
+            lastNumberHolder.get()?.let {
+                snailFishNumberInt.previous = it
+            }
+            lastNumberHolder.set(snailFishNumberInt)
+            snailFishNumberInt
+        } else {
+            convertToSnailFish(snailFishNumber.leftSnail!!, lastNumberHolder)
+        }
+        val right = if (snailFishNumber.rightSnail == null) {
+            val snailFishNumberInt = SnailFishNumberInt(snailFishNumber.rightValue)
+            lastNumberHolder.get()?.let {
+                snailFishNumberInt.previous = it
+            }
+            lastNumberHolder.set(snailFishNumberInt)
+            snailFishNumberInt
+        } else {
+            convertToSnailFish(snailFishNumber.rightSnail!!, lastNumberHolder)
+        }
+        return SnailFishNumberPair(left, right)
     }
 
     val part1ExpectedResult = 4140L
@@ -103,7 +164,7 @@ class Puzzle {
         checkEquals(reduced.toString(), result)
     }
 
-    fun magnitude(reduceSnail: SnailFishNumber): Result {
+    fun magnitude(reduceSnail: SnailFishNumberOld): Result {
         val l: Long = if (reduceSnail.leftValue > -1) {
             reduceSnail.leftValue.toLong()
         } else {
@@ -117,9 +178,9 @@ class Puzzle {
         return 3 * l + 2 * r
     }
 
-    private fun reduceSnail(input: List<SnailFishNumber>): SnailFishNumber {
+    private fun reduceSnail(input: List<SnailFishNumberOld>): SnailFishNumberOld {
         val fishNumber = input.reduce { acc, snailFishNumber ->
-            val result = SnailFishNumber(acc.line, 0)
+            val result = SnailFishNumberOld(acc.line, 0)
             result.leftSnail = acc
             acc.parentSnail = result
             result.rightSnail = snailFishNumber
@@ -129,22 +190,22 @@ class Puzzle {
         return fishNumber
     }
 
-    private fun doExplode(result: SnailFishNumber): SnailFishNumber {
+    private fun doExplode(result: SnailFishNumberOld): SnailFishNumberOld {
         while (explode(result, 0) || split(result)) {
         }
         return result
     }
 
-    fun getTop(source: SnailFishNumber): SnailFishNumber? {
+    fun getTop(source: SnailFishNumberPair): SnailFishNumberPair? {
         var parent = source
-        while (parent.parentSnail != null) {
-            parent = parent.parentSnail!!
+        while (parent.parent != null) {
+            parent = parent.parent!!
         }
         return parent
     }
 
-    fun getAllValues(source: SnailFishNumber): List<Pair<SnailFishNumber, Int>> {
-        val result = mutableListOf<Pair<SnailFishNumber, Int>>()
+    fun getAllValues(source: SnailFishNumberOld): List<Pair<SnailFishNumberOld, Int>> {
+        val result = mutableListOf<Pair<SnailFishNumberOld, Int>>()
         if (source.leftValue > -1) {
             result.add(Pair(source, source.leftValue))
         } else {
@@ -158,34 +219,27 @@ class Puzzle {
         return result
     }
 
-    private fun explode(current: SnailFishNumber, depth: Int): Boolean {
-        if (depth == 4 && (current.leftSnail != null || current.rightSnail != null)) {
+    private fun explode(current: SnailFishNumberPair, depth: Int): Boolean {
+        if (depth == 4 && (current.left is SnailFishNumberPair || current.right is SnailFishNumberPair)) {
             throw java.lang.IllegalStateException()
         }
-        if (depth == 4 && current.leftSnail == null && current.rightSnail == null) {
+        if (depth == 4 && current.left is SnailFishNumberInt && current.right is SnailFishNumberInt) {
 //            println("explode")
-            val allValues = getAllValues(getTop(current)!!)
-            val indexOfFirst = allValues.indexOfFirst { it.first === current }
-            if (indexOfFirst > 0) {
-                val exploding = allValues[indexOfFirst - 1].first
-                if (exploding.rightValue != -1) {
-                    exploding.rightValue += current.leftValue
-                } else {
-                    exploding.leftValue += current.leftValue
-                }
+            // val allValues = getAllValues(getTop(current)!!)
+            current.left.previous?.let {
+                it.value += current.left.value
             }
-            if (indexOfFirst + 2 < allValues.size) {
-                val exploding = allValues[indexOfFirst + 2].first
-                if (exploding.leftValue != -1) {
-                    exploding.leftValue += current.rightValue
-                } else {
-                    exploding.rightValue += current.rightValue
-                }
+            current.right.next?.let {
+                it.value += current.left.value
             }
-            val parentSnail = current.parentSnail!!
-            if (parentSnail.leftSnail == current) {
-                parentSnail.leftSnail = null
-                parentSnail.leftValue = 0
+
+            val parentSnail = current.parent!!
+            if (parentSnail.left == current) {
+                parentSnail.left = (SnailFishNumberInt(0)).apply {
+                    current.left.previous?.let{ p -> previous = p}
+                    current.left.next?.let{ p -> next = p}
+                }
+
             } else if (parentSnail.rightSnail == current) {
                 parentSnail.rightSnail = null
                 parentSnail.rightValue = 0
@@ -203,7 +257,7 @@ class Puzzle {
         return false
     }
 
-    private fun split(result: SnailFishNumber): Boolean {
+    private fun split(result: SnailFishNumberOld): Boolean {
         if (result.leftValue >= 10) {
 //            println("split left")
             val newSnail = splitValueIntoSnailFishNumber(result.leftValue)
@@ -232,8 +286,8 @@ class Puzzle {
 
     private fun splitValueIntoSnailFishNumber(
         valueToSplit: Int
-    ): SnailFishNumber {
-        val newSnail = SnailFishNumber("", 0)
+    ): SnailFishNumberOld {
+        val newSnail = SnailFishNumberOld("", 0)
         newSnail.leftValue = valueToSplit / 2
         newSnail.rightValue = valueToSplit - newSnail.leftValue
         return newSnail
