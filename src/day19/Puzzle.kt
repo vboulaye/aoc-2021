@@ -138,7 +138,10 @@ private fun isValid(orientation1: Orientation): Boolean {
 }
 
 
-val allOrientations: List<Orientation> = dims.flatMap { x ->
+val allOrientations: List<Orientation> = transformations.map {
+    Orientation(it)
+}
+val allOrientations3: List<Orientation> = dims.flatMap { x ->
     dims
         .filter { y -> y != x }
         .flatMap { y ->
@@ -203,10 +206,19 @@ data class XYZ(val x: Int, val y: Int, val z: Int) : Comparable<XYZ> {
             .mapIndexed { coord, value ->
                 orientation.matrix[coord].sumOf { it * value }
             }
-
+        val r = asArray()
+        val x = (0..2).fold(0) { acc, i ->
+            acc + orientation.matrix[0][i] * r[i]
+        }
+        val y = (0..2).fold(0) { acc, i ->
+            acc + orientation.matrix[1][i] * r[i]
+        }
+        val z = (0..2).fold(0) { acc, i ->
+            acc + orientation.matrix[2][i] * r[i]
+        }
         checkEquals(x * x + y * y + z * z, mapIndexed.map { it * it }.sum())
-
-        return XYZ.fromArray(mapIndexed)
+        return XYZ(x, y, z)
+        //return XYZ.fromArray(mapIndexed)
     }
 
     fun translate(vector: Vector): XYZ {
@@ -236,6 +248,9 @@ data class Vector(val from: XYZ, val to: XYZ) : Comparable<Vector> {
         return dz.compareTo(other.dz)
     }
 
+    fun translate(vector: Vector): Vector {
+        return Vector(from, to.translate(vector))
+    }
 
 }
 
@@ -244,17 +259,17 @@ data class Scanner(val index: Int, val points: List<XYZ>) {
 
     }
 
+    fun rotate(orientation: Orientation): Scanner {
+        val rotated = points.map { it.rotate(orientation) }
+        return Scanner(index, rotated)
+    }
+
     val allVectors: List<Vector> = points.flatMap { from ->
         points
             .filter { from !== it }
             .filter { from < it }
             .map { to -> Vector(from, to) }
             .toSet()
-    }
-
-    fun rotate(orientation: Orientation): Scanner {
-        val rotated = points.map { it.rotate(orientation) }
-        return Scanner(index, rotated)
     }
 
     fun translate(vector: Vector): Scanner {
@@ -301,25 +316,56 @@ class Puzzle {
         val input = clean(rawInput)
 
         //val findBeacons1 = findBeacons(input[0], input[1])
-        val mapped: MutableMap<Scanner, ScannerMapping> = mutableMapOf()
+        val mapped: MutableMap<Scanner, MutableList<ScannerMapping>> = mutableMapOf()
         input
             .forEach { sourceScanner ->
                 input
                     .filter { targetScanner -> targetScanner !== sourceScanner }
                     //  .filter { it.index > sourceScanner.index }
                     .forEach { targetScanner ->
-                        if (!mapped.containsKey(sourceScanner)) {
-                            println("${sourceScanner.index} -> ${targetScanner.index}")
-                            val findBeacons = findBeacons(sourceScanner, targetScanner)
-                            if (findBeacons != null) {
-                                println("${sourceScanner.index} -> ${targetScanner.index} + ${findBeacons.beacons.size}")
-                                val scannerMapping = ScannerMapping(sourceScanner, targetScanner, findBeacons)
-                                mapped[sourceScanner] = scannerMapping
-                                mapped[targetScanner] = scannerMapping
+                        // if (!mapped.containsKey(sourceScanner)) {
+                        //  println("${sourceScanner.index} -> ${targetScanner.index}")
+                        val findBeacons = findBeacons(sourceScanner, targetScanner)
+                        if (findBeacons != null) {
+                            println("${sourceScanner.index} -> ${targetScanner.index} + ${findBeacons.beacons.size}")
+                            val scannerMapping = ScannerMapping(sourceScanner, targetScanner, findBeacons)
+                            if (mapped[sourceScanner] != null) {
+                                mapped[sourceScanner]!!.add(scannerMapping)
+                            } else {
+                                mapped[sourceScanner] = mutableListOf(scannerMapping)
                             }
                         }
+                        // }
                     }
             }
+
+        val scannerToTranslations: MutableMap<Scanner, Vector> = mutableMapOf()
+        populateMappings(input[0], Vector(XYZ(0, 0, 0), XYZ(0, 0, 0)), mapped, scannerToTranslations)
+//        val scannerToTranslations2 = input.subList(1, input.size).map { scanner ->
+//            var scannerMapping = mapped[scanner]!!
+//            val mappings = mutableListOf<ScannerMapping>()
+//            while (scannerMapping.target != input[0]) {
+//                mappings.add(scannerMapping)
+//                scannerMapping = mapped[scannerMapping.target]!!
+//            }
+//            val globalTranslation = mappings.fold(Vector(XYZ(0, 0, 0), XYZ(0, 0, 0))) { acc, scannerMapping ->
+//                acc.translate(scannerMapping.resultBeacons.translation)
+//            }
+//            scanner to globalTranslation
+//
+//
+////            if (scanner === input[0] {
+////                    scanner to Vector(scanner.points[0], scanner.points[0])
+////                }
+////                null
+//        }
+
+        val commonPoints = input.fold(input[0].points.toSet()) { acc: Set<XYZ>, scanner ->
+            val translation = scannerToTranslations[scanner]!!
+            val translatedPoints: List<XYZ> = scanner.points.map { it.translate(translation) }
+            val intersect: Set<XYZ> = acc.intersect(translatedPoints)
+            intersect
+        }
 //        val results = input.subList(1, input.size)
 //            .map { findBeacons(input[0], it) }
 
@@ -331,7 +377,23 @@ class Puzzle {
 //                if(scannerMapping.source==
 //            }
 //        }
-        return 0;// results.flatMap { it.beacons }.distinct().size.toLong()
+        return commonPoints.size.toLong();// results.flatMap { it.beacons }.distinct().size.toLong()
+    }
+
+    private fun populateMappings(
+        scanner: Scanner,
+        translation: Vector,
+        mapped: MutableMap<Scanner, MutableList<ScannerMapping>>,
+        scannerToTranslations: MutableMap<Scanner, Vector>
+    ) {
+        mapped[scanner]!!.forEach { scannerMapping ->
+            if (scannerToTranslations[scannerMapping.target] == null) {
+                val nextTranslation = translation.translate(scannerMapping.resultBeacons.translation)
+
+                scannerToTranslations[scannerMapping.target]  = nextTranslation
+                populateMappings(scannerMapping.target, nextTranslation, mapped, scannerToTranslations)
+            }
+        }
     }
 
     data class ResultBeacons(val orientation: Orientation, val translation: Vector, val beacons: List<XYZ>)
@@ -376,11 +438,17 @@ class Puzzle {
 
     private fun computeResultBeacons(source: Scanner, target: Scanner): ResultBeacons? {
         val commonLength = source.allVectors.map { it.length }.intersect(target.allVectors.map { it.length })
-        println("${commonLength.size}")
+        if (commonLength.size < 12) return null
+        //  println("${commonLength.size}")
         allOrientations.forEach { orientation ->
             val rotated = target.rotate(orientation)
-            source.points.forEach { startPoint ->
-                rotated.points.forEach { otherPoint ->
+
+            val possibleVectors = source.allVectors.filter { commonLength.contains(it.length) }
+            val possibleSources = (possibleVectors.map { it.from } + possibleVectors.map { it.to }).toSet()
+            val possibleTargetVectors = rotated.allVectors.filter { commonLength.contains(it.length) }
+            val possibleTargets = (possibleTargetVectors.map { it.from } + possibleTargetVectors.map { it.to }).toSet()
+            possibleSources.forEach { startPoint ->
+                possibleTargets.forEach { otherPoint ->
                     val translation = Vector(otherPoint, startPoint)
                     val translated = rotated.translate(translation)
                     val matchingPoints = source.points.filter { translated.points.contains(it) }
