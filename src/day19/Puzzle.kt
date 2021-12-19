@@ -6,6 +6,7 @@ import org.jetbrains.kotlinx.multik.ndarray.data.D1
 import org.jetbrains.kotlinx.multik.ndarray.data.NDArray
 import utils.checkEquals
 import utils.readInput
+import java.lang.Math.abs
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -84,6 +85,7 @@ fun multiply(a: List<List<Int>>, b: List<List<Int>>): List<List<Int>> {
 
 fun c(deg: Double): Int = cos(deg).toInt()
 fun s(deg: Double): Int = sin(deg).toInt()
+
 fun toRadian(deg: Int): Double = PI * deg / 360
 val angles = listOf(0, 90, 180, 270).map { toRadian(it) }
 val allOrientations2: List<Orientation> = angles.flatMap { x ->
@@ -125,8 +127,14 @@ val allOrientations2: List<Orientation> = angles.flatMap { x ->
             )
         }
     }
-        .filter { it.matrix.none { it.sum() != 1 } }
+        .filter { isValid(it) }
 
+}
+
+private fun isValid(orientation1: Orientation): Boolean {
+    return orientation1.matrix.all { intList: List<Int> ->
+        intList.map { abs(it) }.sumOf { it } == 1
+    }
 }
 
 
