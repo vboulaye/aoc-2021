@@ -1,5 +1,6 @@
 package day20
 
+import utils.asBinary
 import utils.readInput
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
@@ -7,25 +8,85 @@ import kotlin.time.measureTime
 typealias Result = Long
 
 
-class Puzzle {
-    fun clean(input: List<String>): List<String> {
-        return input
-            .filter { line -> true }
-            .map { line -> line }
+data class Input(val algo: List<Char>, val grid: List<List<Char>>, val defaultChar: Char = '.') {
+    val s = grid.joinToString("\n") { it.joinToString("") }
+
+
+    private fun makeEmptyLine(wished: Int) = (0 until wished).map { defaultChar }
+
+    fun enhance(): Input {
+        val newDots = 2
+        val newLine: List<List<Char>> = (0 until newDots).map { makeEmptyLine(grid[0].size + 2 * newDots) }
+        val addColumns: List<List<Char>> = grid.map {
+            makeEmptyLine(newDots) + it + makeEmptyLine(newDots)
+        }
+        val newGrid: List<List<Char>> = newLine + addColumns + newLine
+
+        val mutable = newGrid.map { it.toMutableList() }.toMutableList()
+        val enhanced = newGrid.mapIndexed { y, line ->
+            line.mapIndexed { x, c ->
+                val w = getWeight(x, y, mutable)
+                algo[w.asBinary()].toChar()
+            }
+        }
+        val newDef: Char = if (defaultChar == '.') {
+            algo[0]
+        } else {
+            algo["111111111".asBinary()]
+        }
+        return Input(algo, enhanced, newDef)
     }
 
-    val part1ExpectedResult = 0L
+    private fun getWeight(x: Int, y: Int, mutable: MutableList<MutableList<Char>>): String {
+        return (-1..1).map { dy ->
+            (-1..1).map { dx ->
+                try {
+                    mutable[y + dy][x + dx]
+                } catch (e: IndexOutOfBoundsException) {
+                    defaultChar
+                }
+            }.map { if (it == '.') '0' else '1' }
+
+        }
+
+            .joinToString("")
+            { it.joinToString("") }
+    }
+}
+
+class Puzzle {
+    fun clean(input: List<String>): Input {
+        val algo = input[0].toList()
+        val grid: List<List<Char>> = input.subList(2, input.size)
+            .filter { line -> true }
+            .map { line -> line.toList() }
+        return Input(algo, grid)
+    }
+
+    val part1ExpectedResult = 35L
     fun part1(rawInput: List<String>): Result {
         val input = clean(rawInput)
 
-        return 0
+//        val enhance1 = input.enhance();
+//        println("enhance1: \n${enhance1.s}")
+//        val enhance2 = enhance1.enhance();
+//        println("enhance2: \n${enhance2.s}")
+
+        val enhanced = (0 until 2).fold(input) { acc, _ -> acc.enhance() }
+        val pixelCount = enhanced.grid.sumOf { line -> line.count { it == '#' } }.toLong()
+        // 5378 too low
+        // 6175 too hiugh
+        // 6782
+        // 6036 too high
+        return pixelCount
     }
 
-    val part2ExpectedResult = 0L
+    val part2ExpectedResult = 3351L
     fun part2(rawInput: List<String>): Result {
         val input = clean(rawInput)
-
-        return 0
+        val enhanced = (0 until 50).fold(input) { acc, _ -> acc.enhance() }
+        val pixelCount = enhanced.grid.sumOf { line -> line.count { it == '#' } }.toLong()
+        return pixelCount
     }
 
 }
