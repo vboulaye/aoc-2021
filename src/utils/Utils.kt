@@ -56,6 +56,9 @@ fun main() {
     check(Vector(Point(1, 1), Point(0, 0)).isDiagonal())
 }
 
+fun modByOne(value:Long, mod:Int) =  (value -1) % mod + 1
+fun modByOne(value:Int, mod:Int) =  (value -1) % mod + 1
+
 fun <T> checkEquals(testResult: T, expectedTestResult: T) {
     check(testResult == expectedTestResult) { "ERROR : $testResult != ${expectedTestResult}" }
 }
