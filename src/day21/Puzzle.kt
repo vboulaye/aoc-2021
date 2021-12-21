@@ -35,8 +35,18 @@ data class Player(val player: Int, var position: Int) {
 typealias Rolls = Int
 class Puzzle {
     val possibleDiceScores: MutableMap<Int, Int> = mutableMapOf()
+    val possibleDiceScores2: MutableMap<Int, Int> = mutableMapOf()
 
     init {
+        possibleDiceScores2.putAll(
+            (1..3).flatMap { x ->
+                (1..3).flatMap { y ->
+                    (1..3).map { z ->
+                        x + y + z
+                    }
+                }
+            }.groupingBy { it }.eachCount().toMap()
+        )
         (3..9).forEach { whishedScore ->
 
             var counter = 0
@@ -163,7 +173,7 @@ class Puzzle {
 
     data class Dirac(
         val player: Int,
-        val position: Int,
+        val positionCounter: Int,
         val score: Int = 0,
 //        val rolls: List<Rolls> = emptyList(),
 //        val games: ArrayDeque<List<Rolls>>,
@@ -177,27 +187,49 @@ class Puzzle {
         //  games: ArrayDeque<List<Rolls>>,
         d2: Dirac
     ) {
-        if (d1.score >= 21) {
-            //  println(d1.rolls)
-//            d1.games.add(d1.rolls)
-            d1.globalCount.set(d1.globalCount.get() + d1.currentCount)
-//            if(d1.games.size%100000==0) {
-//                println("${d1.player} ${d1.games.size}")
-//            }
-
-            return
-        }
+//        val a= 341960390180808L+444356092776315L
+//        val b= a%3
+//        if (d1.score >= 21) {
+//            //  println(d1.rolls)
+////            d1.games.add(d1.rolls)
+//            d1.globalCount.set(d1.globalCount.get() + d1.currentCount)
+////            if(d1.games.size%100000==0) {
+////                println("${d1.player} ${d1.games.size}")
+////            }
+//
+//            return
+//        }
+        var universCount = 0L
+        var universCount2 = 0L
         (3..9).forEach { rollsScore ->
-            val newPosition = d1.position + rollsScore
-            val newScore = d1.score + (newPosition + -1) % 10 + 1
-            val newD1 = Dirac(
-                d1.player, newPosition, newScore, //d1.rolls + listOf(rollsScore), d1.games
-                d1.currentCount * possibleDiceScores[rollsScore]!!.toLong(),
-                d1.globalCount
-            )
+            val newPositionCounter = d1.positionCounter + rollsScore
+            val pos = (newPositionCounter + -1) % 10 + 1
+            val newScore = d1.score + pos
+            val universesForScore = possibleDiceScores[rollsScore]!!.toLong()
+            if (newScore >= 21) {
+                universCount += universesForScore
+                // d2.globalCount.set(0)
+            } else {
+                val newD1 = Dirac(
+                    d1.player, newPositionCounter, newScore, //d1.rolls + listOf(rollsScore), d1.games
+                    d1.currentCount * universesForScore,
 
-            playD1(d2, newD1)
+                    )
+                val newD2 = Dirac(
+                    d2.player,d2.positionCounter, d2.score, //d1.rolls + listOf(rollsScore), d1.games
+                    d1.currentCount * universesForScore,
+
+                    )
+                playD1(newD2, newD1)
+                universCount2+= universesForScore * newD2.globalCount.get()
+                 universCount += universesForScore * newD1.globalCount.get()
+            }
+//            universCount += possibleDiceScores[rollsScore]!!*
+
         }
+        d1.globalCount.set(universCount)
+        d2.globalCount.set(universCount2)
+
     }
 
 
