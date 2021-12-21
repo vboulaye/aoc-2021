@@ -105,8 +105,15 @@ class Puzzle {
             val score: Int,
         )
 
+        val cache = mutableMapOf<Pair<DiracState, DiracState>, WinningUniverses>()
+
         private fun playRound(d1: DiracState, d2: DiracState): WinningUniverses {
-            return possibleDiracDiceScores.entries
+            val cached = cache[d1 to d2]
+            if (cached != null) {
+                return cached
+            }
+
+            val winningScores = possibleDiracDiceScores.entries
                 .fold(WinningUniverses()) { acc, (rollsScore, universesCountForScore) ->
                     val newPosition = modByOne(d1.position + rollsScore, 10)
                     val newScore = d1.score + newPosition
@@ -118,6 +125,8 @@ class Puzzle {
                         acc + subWinCount.reverse() * universesCountForScore
                     }
                 }
+            cache[d1 to d2] = winningScores
+            return winningScores
         }
     }
 
