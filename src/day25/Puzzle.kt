@@ -1,24 +1,83 @@
 package day25
 
 import utils.readInput
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 
 typealias Result = Long
 
 
-class Puzzle {
-    fun clean(input: List<String>): List<String> {
-        return input
-            .filter { line -> true }
-            .map { line -> line }
+data class Sea(val array: List<List<Char>>) {
+    val width = array[0].size
+    val height = array.size
+    val hasMoved = AtomicBoolean()
+
+    fun step(): Sea? {
+        val moveEast = moveEast()
+
+        val moveSouth = moveEast.moveSouth()
+        if(hasMoved.get()||moveEast.hasMoved.get()) {
+            return moveSouth
+        }
+        return null
     }
 
-    val part1ExpectedResult = 0L
+    private fun moveSouth(
+    ): Sea {
+        val moveSouth = array.mapIndexed { y, line ->
+            line.mapIndexed { x, cucumber ->
+                if (get(y, x) == 'v' && get(y + 1, x) == '.') {
+                    hasMoved.set(true)
+                    '.'
+                } else if (get(y, x) == '.' && get(y - 1, x) == 'v') {
+                    hasMoved.set(true)
+                    'v'
+                } else {
+                    cucumber
+                }
+            }
+        }
+        return Sea(moveSouth)
+    }
+
+    private fun moveEast(): Sea {
+        val moveEast = Sea(array.mapIndexed { y, line ->
+            line.mapIndexed { x, cucumber ->
+                if (get(y, x) == '>' && get(y, x + 1) == '.') {
+                    hasMoved.set(true)
+                    '.'
+                } else if (get(y, x) == '.' && get(y, x - 1) == '>') {
+                    hasMoved.set(true)
+                    '>'
+                } else {
+                    cucumber
+                }
+            }
+        })
+        return moveEast
+    }
+
+    private fun get(y: Int, x: Int) = array[(y + height) % height][(x + width) % width]
+}
+
+class Puzzle {
+    fun clean(input: List<String>): List<List<Char>> {
+        return input
+            .filter { line -> true }
+            .map { line -> line.toList() }
+    }
+
+    val part1ExpectedResult = 58L
     fun part1(rawInput: List<String>): Result {
         val input = clean(rawInput)
-
-        return 0
+        var sea: Sea? = Sea(input)
+        var i=0
+        while(sea!=null) {
+            i++
+            sea = sea.step()
+        }
+        return i.toLong()
     }
 
     val part2ExpectedResult = 0L
